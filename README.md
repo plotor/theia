@@ -1,2 +1,5 @@
 # kratos
-:unicorn: General annotation-based configuration injector.
+
+General annotation-based configuration injector.
+
+This project is under developing.
