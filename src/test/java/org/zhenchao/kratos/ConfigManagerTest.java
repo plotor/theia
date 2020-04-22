@@ -16,8 +16,8 @@ public class ConfigManagerTest {
 
     @Test
     public void initialize() throws Exception {
-        final ConfigManager configManager = ConfigManager.with("org.zhenchao.kratos.manager");
-        final int count = configManager.initialize();
+        final ConfigManager configManager = ConfigManager.getInstance();
+        final int count = configManager.initialize("org.zhenchao.kratos.manager");
         Assert.assertEquals(4, count);
         Assert.assertNotNull(configManager.getOptions(Options1.class));
         Assert.assertNotNull(configManager.getOptions(Options2.class));
@@ -32,7 +32,6 @@ public class ConfigManagerTest {
         configManager.getInjector().configureBean(options5);
         Assert.assertNotNull(configManager.getOptions(Options5.class));
         Assert.assertSame(options5, configManager.getOptions(Options5.class));
-
     }
 
 }

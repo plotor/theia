@@ -1,6 +1,6 @@
 package org.zhenchao.kratos;
 
-import org.apache.commons.lang3.Validate;
+import org.apache.commons.lang3.StringUtils;
 import org.reflections.Reflections;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,8 +19,6 @@ public class ConfigManager {
 
     private static final ConfigManager INSTANCE = new ConfigManager();
 
-    private static String reflectPackage;
-
     private volatile boolean initialized = false;
 
     private final ConfigInjector injector = ConfigInjector.getInstance();
@@ -29,31 +27,24 @@ public class ConfigManager {
         return INSTANCE;
     }
 
-    /**
-     * Set the scan package for reflection.
-     *
-     * @param reflectPackage
-     * @return
-     */
-    public static ConfigManager with(String reflectPackage) {
-        ConfigManager.reflectPackage = reflectPackage;
-        return getInstance();
+    public int initialize() throws ConfigException {
+        return this.initialize("");
     }
 
     /**
      * Initialize the configuration, all {@link Options}s will be injection,
      * exclude the option who's {@link Configurable#autoConfigure()} is false.
      *
+     * @param rootPackage the root package of reflection scanner
      * @return number of injected options
      * @throws ConfigException
      */
-    public synchronized int initialize() throws ConfigException {
+    public synchronized int initialize(final String rootPackage) throws ConfigException {
         if (initialized) {
             throw new ConfigException("already initialized");
         }
         int count = 0;
-        Validate.notBlank(reflectPackage, "missing reflect root package");
-        Reflections reflections = new Reflections(reflectPackage);
+        Reflections reflections = StringUtils.isBlank(rootPackage) ? new Reflections() : new Reflections(rootPackage);
         final Set<Class<? extends Options>> types = reflections.getSubTypesOf(Options.class);
         for (final Class<? extends Options> optionsType : types) {
             if (Modifier.isAbstract(optionsType.getModifiers())) {

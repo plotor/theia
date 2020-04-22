@@ -33,7 +33,8 @@ public @interface Configurable {
 
     /**
      * Autoload configuration when found source update.
-     * {@code true} means ignore the {@link Constants#COMMONS_CONFIG_AUTOLOAD} config, default is {@link false}.
+     * {@code true} means ignore the {@link Constants#COMMONS_CONFIG_AUTOLOAD} config,
+     * default is {@link false}.
      */
     boolean autoload() default false;
 
