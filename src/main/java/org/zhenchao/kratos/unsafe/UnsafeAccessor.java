@@ -11,6 +11,8 @@ import java.security.AccessController;
 import java.security.PrivilegedAction;
 
 /**
+ * Copy from HBase.
+ *
  * @author zhenchao.wang 2018-06-19 14:48
  * @version 1.0.0
  */
