@@ -12,7 +12,7 @@ import java.util.List;
  * @author zhenchao.wang 2018-01-30 10:29
  * @version 1.0.0
  */
-@Configurable(resource = "ZK:/services/com.xiaomi.passport/passport-test/default")
+@Configurable("ZK:/kratos/example")
 public class DefaultOptions2 extends AbstractOptions {
 
     private static final long serialVersionUID = 6028832012294963740L;

@@ -16,13 +16,13 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Configurable(resource = "ZK:/services/com.xiaomi.passport/passport-test/default")
+@Configurable("ZK:/kratos/example")
 public class DefaultOptions extends AbstractOptions {
 
     private static final long serialVersionUID = 3950396769022356384L;
 
-    @Attribute("login_url")
-    private String loginUrl;
+    @Attribute("access_url")
+    private String accessUrl;
 
     @Attribute(name = "nums", converter = ListConverter.class)
     public List<Integer> nums;
@@ -37,11 +37,11 @@ public class DefaultOptions extends AbstractOptions {
 
     @Override
     public boolean validate() {
-        return StringUtils.isNotBlank(loginUrl) && CollectionUtils.isNotEmpty(nums);
+        return StringUtils.isNotBlank(accessUrl) && CollectionUtils.isNotEmpty(nums);
     }
 
-    public String getLoginUrl() {
-        return this.loginUrl;
+    public String getAccessUrl() {
+        return this.accessUrl;
     }
 
     public Set<Integer> getSet() {

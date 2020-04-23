@@ -20,6 +20,8 @@ import java.util.Iterator;
 import java.util.List;
 
 /**
+ * Copy from HBase.
+ *
  * @author zhenchao.wang 2018-06-19 11:51
  * @version 1.0.0
  */

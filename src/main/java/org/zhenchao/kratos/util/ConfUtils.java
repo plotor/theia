@@ -21,7 +21,6 @@ public class ConfUtils {
     private static final Set<String> PREFIX_SET = new HashSet<>();
 
     static {
-        PREFIX_SET.add(Constants.GCONF_PREFIX);
         PREFIX_SET.add(Constants.ZK_PREFIX);
         PREFIX_SET.add(Constants.CP_PREFIX);
     }
@@ -41,11 +40,6 @@ public class ConfUtils {
 
     public static boolean notValidPrefix(String prefix) {
         return !isValidPrefix(prefix);
-    }
-
-    public static boolean isGConfResource(final String resourceName) {
-        return StringUtils.startsWithIgnoreCase(resourceName, Constants.GCONF_PREFIX)
-                && resourceName.length() > Constants.GCONF_PREFIX.length();
     }
 
     public static boolean isZkResource(final String resourceName) {

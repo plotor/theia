@@ -12,25 +12,25 @@ import org.zhenchao.kratos.ConfigInjector;
 import org.zhenchao.kratos.Configurable;
 import org.zhenchao.kratos.Options;
 
-@Configurable("GConf:PASSPORT.TEST:example")
+@Configurable("ZK:/kratos/example")
 public class SourceTest extends BaseTestCase implements Options {
 
     private static final long serialVersionUID = -2966109051323512806L;
 
     @Test
     public void testHashCode() {
-        Source s1 = new Source(this.getClass(), "GConf:PASSPORT.TEST:example");
-        Source s2 = new Source(this.getClass(), "GConf:PASSPORT.TEST:example");
-        Source s3 = new Source(this.getClass(), "ZK:PASSPORT.TEST:example");
+        Source s1 = new Source(this.getClass(), "CLASSPATH:classpath_options");
+        Source s2 = new Source(this.getClass(), "CLASSPATH:classpath_options");
+        Source s3 = new Source(this.getClass(), "ZK:/kratos/example");
         assertEquals(s1.hashCode(), s2.hashCode());
         assertNotEquals(s2.hashCode(), s3.hashCode());
     }
 
     @Test
     public void testEqualsObject() {
-        Source s1 = new Source(this.getClass(), "GConf:PASSPORT.TEST:example");
-        Source s2 = new Source(this.getClass(), "GConf:PASSPORT.TEST:example");
-        Source s3 = new Source(this.getClass(), "ZK:PASSPORT.TEST:example");
+        Source s1 = new Source(this.getClass(), "CLASSPATH:classpath_options");
+        Source s2 = new Source(this.getClass(), "CLASSPATH:classpath_options");
+        Source s3 = new Source(this.getClass(), "ZK:/kratos/example");
 
         assertEquals(s1, s1);
         assertEquals(s1, s2);
@@ -59,20 +59,20 @@ public class SourceTest extends BaseTestCase implements Options {
 
     @Test
     public void testConfigurableSourceObject() {
-        Source s1 = new Source(new GConfResourceOptions());
-        assertSame(GConfResourceOptions.class, s1.getOptionsClass());
-        assertEquals("GConf:PASSPORT.TEST:example", s1.getResourceName());
+        Source s1 = new Source(new ClassPathResourceOptions());
+        assertSame(ClassPathResourceOptions.class, s1.getOptionsClass());
+        assertEquals("CLASSPATH:classpath_options", s1.getResourceName());
 
         Source s2 = new Source(new ZkResourceOptions());
         assertSame(ZkResourceOptions.class, s2.getOptionsClass());
-        assertEquals("ZK:PASSPORT.TEST:example", s2.getResourceName());
+        assertEquals("ZK:/kratos/example", s2.getResourceName());
     }
 
     @Test
     public void testSource() throws Exception {
-        Source source = new Source(this.getClass(), "ZK:PASSPORT.TEST:example");
+        Source source = new Source(this.getClass(), "ZK:/kratos/example");
         assertSame(this.getClass(), source.getOptionsClass());
-        assertEquals("ZK:PASSPORT.TEST:example", source.getResourceName());
+        assertEquals("ZK:/kratos/example", source.getResourceName());
     }
 
     @Test(expected = IllegalStateException.class)
@@ -102,13 +102,13 @@ public class SourceTest extends BaseTestCase implements Options {
         private static final long serialVersionUID = 3641595007082436680L;
     }
 
-    @Configurable("GConf:PASSPORT.TEST:example")
-    public static class GConfResourceOptions extends AbstractOptions {
+    @Configurable("CLASSPATH:classpath_options")
+    public static class ClassPathResourceOptions extends AbstractOptions {
 
         private static final long serialVersionUID = -2570195653697520971L;
     }
 
-    @Configurable(resource = "ZK:PASSPORT.TEST:example")
+    @Configurable(resource = "ZK:/kratos/example")
     public static class ZkResourceOptions extends AbstractOptions {
 
         private static final long serialVersionUID = -4683158010978387790L;
