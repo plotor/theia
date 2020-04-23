@@ -61,6 +61,13 @@
             <scope>test</scope>
         </dependency>
 
+        <dependency>
+            <groupId>org.apache.curator</groupId>
+            <artifactId>curator-framework</artifactId>
+            <version>4.3.0</version>
+            <scope>test</scope>
+        </dependency>
+
         <!-- unit test -->
         <dependency>
             <groupId>org.mockito</groupId>

@@ -52,8 +52,13 @@ public class ClasspathSourceProvider extends AbstractSourceProvider {
 
     @Override
     public boolean support(final Source source) {
-        final String resourceName = this.resourceName(source);
-        return ConfUtils.isClassPathResource(resourceName);
+        try {
+            final String resourceName = this.resourceName(source);
+            return ConfUtils.isClassPathResource(resourceName);
+        } catch (Throwable t) {
+            // ignore it
+        }
+        return false;
     }
 
     @Override

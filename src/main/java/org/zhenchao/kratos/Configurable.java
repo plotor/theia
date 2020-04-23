@@ -17,7 +17,7 @@ import java.lang.annotation.Target;
 @Documented
 public @interface Configurable {
 
-    /** The configuration resource, eg. GConf:PASSPORT.TEST:example */
+    /** The configuration resource, eg. ZK:/kratos/example */
     String resource() default "";
 
     /** Alias for {@link #resource()} */

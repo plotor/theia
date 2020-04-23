@@ -12,7 +12,6 @@ public interface Constants {
 
     String DELIMITER = ":";
 
-    String GCONF_PREFIX = "GCONF" + DELIMITER;
     String ZK_PREFIX = "ZK" + DELIMITER;
     String CP_PREFIX = "CLASSPATH" + DELIMITER;
 
