@@ -201,6 +201,7 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
+
 package org.zhenchao.kratos;
 
 import org.apache.commons.lang3.BooleanUtils;
@@ -226,19 +227,22 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.function.Supplier;
 
 /**
  * @author zhenchao.wang 2016-12-01 14:22:31
  * @version 1.0.0
  */
-public class ConfigInjector {
+public class ConfigInjector implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(ConfigInjector.class);
 
     private static final ConfigInjector INSTANCE = new ConfigInjector();
 
-    private ProviderFactory providerFactory = ProviderFactory.getInstance();
-
+    private final ProviderFactory providerFactory = ProviderFactory.getInstance();
     private PropertiesBuilderFactory builderFactory = new PropertiesBuilderFactory();
 
     private volatile boolean shutdown;
@@ -248,6 +252,10 @@ public class ConfigInjector {
 
     private final Set<InjectEventListener> injectListeners = new HashSet<>();
     private final Set<UpdateEventListener> updateListeners = new HashSet<>();
+
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    private final Lock readLock = lock.readLock();
+    private final Lock writeLock = lock.writeLock();
 
     private ConfigInjector() {
         this.shutdown = false;
@@ -262,17 +270,47 @@ public class ConfigInjector {
      *
      * @return
      */
-    public synchronized ConfigInjector reset() {
-        optionsMap.clear();
-        sourceMap.clear();
-        injectListeners.clear();
-        updateListeners.clear();
-        return INSTANCE;
+    public ConfigInjector reset() {
+        return this.executeInWriteLock(() -> {
+            optionsMap.clear();
+            sourceMap.clear();
+            injectListeners.clear();
+            updateListeners.clear();
+            return INSTANCE;
+        });
     }
 
+    @Override
+    public void close() throws Exception {
+        writeLock.lock();
+        try {
+            if (shutdown) {
+                return;
+            }
+            log.info("Shutdown config injector.");
+            providerFactory.clear();
+            optionsMap.clear();
+            sourceMap.clear();
+            injectListeners.clear();
+            updateListeners.clear();
+            shutdown = true;
+        } finally {
+            writeLock.unlock();
+        }
+    }
+
+    /**
+     * Instantiate and config options.
+     *
+     * @param optionsClass
+     * @param <T>
+     * @return
+     * @throws ConfigException
+     */
     public <T extends Options> ConfigInjector configureBean(final Class<T> optionsClass) throws ConfigException {
         Validate.notNull(optionsClass, "null options class");
-        synchronized (optionsClass) {
+        writeLock.lock();
+        try {
             Options options = optionsMap.get(optionsClass);
             if (null != options) {
                 return this;
@@ -283,8 +321,10 @@ public class ConfigInjector {
                 return this.configureBean(instance);
             } catch (IllegalAccessException | InstantiationException e) {
                 throw new ConfigException(
-                        "create options bean instance error, class: " + optionsClass, e);
+                    "create options bean instance error, class: " + optionsClass, e);
             }
+        } finally {
+            writeLock.unlock();
         }
     }
 
@@ -305,8 +345,8 @@ public class ConfigInjector {
 
         if (!options.getClass().equals(source.getOptionsClass())) {
             throw new ConfigException("options class mismatch, " +
-                    "expected: " + options.getClass().getSimpleName() +
-                    ", but found in source is " + source.getOptionsClass().getSimpleName());
+                "expected: " + options.getClass().getSimpleName() +
+                ", but found in source is " + source.getOptionsClass().getSimpleName());
         }
 
         synchronized (options.getClass()) {
@@ -376,8 +416,8 @@ public class ConfigInjector {
      */
     private boolean injectBean(final Options options, final Source source, boolean reload) throws ConfigException {
         Validate.isTrue(options.getClass().equals(source.getOptionsClass()),
-                "unexpected options class, expected: " + options.getClass().getSimpleName() +
-                        ", but got: " + source.getOptionsClass().getSimpleName());
+            "unexpected options class, expected: " + options.getClass().getSimpleName() +
+                ", but got: " + source.getOptionsClass().getSimpleName());
 
         log.info("Inject options bean[{}], resource[{}]", options.getClass().getSimpleName(), source.getResourceName());
         SourceProvider provider = providerFactory.getSourceProvider(source);
@@ -389,8 +429,8 @@ public class ConfigInjector {
         try {
             final Properties properties = provider.loadProperties(source, builderFactory.newPropertiesBuilder());
             needInject = !reload
-                    || source.isAutoload()
-                    || BooleanUtils.toBoolean(properties.getProperty(Constants.COMMONS_CONFIG_AUTOLOAD, "false"));
+                || source.isAutoload()
+                || BooleanUtils.toBoolean(properties.getProperty(Constants.COMMONS_CONFIG_AUTOLOAD, "false"));
             if (!needInject) {
                 log.warn("[CONF AUTOLOAD DISABLE] skip reload, source[{}].", source);
                 return false;
@@ -420,20 +460,20 @@ public class ConfigInjector {
     private void tryInjectProperties(final Options options, final Source source, final Properties properties) throws ConfigException {
         try {
             log.info("Try inject and verify the options' copy, " +
-                    "options: {}, resource: {}.", source.getOptionsClass().getSimpleName(), source.getResourceName());
+                "options: {}, resource: {}.", source.getOptionsClass().getSimpleName(), source.getResourceName());
             Options copyOptions = SerializationUtils.clone(options);
             this.injectProperties(copyOptions, properties);
             if (!copyOptions.validate()) {
                 throw new ConfigException("invalid configuration, " +
-                        "options: " + source.getOptionsClass().getSimpleName() + ", resource: " + source.getResourceName() + ", and ignore it");
+                    "options: " + source.getOptionsClass().getSimpleName() + ", resource: " + source.getResourceName() + ", and ignore it");
             }
         } catch (Throwable t) {
             if (t instanceof ConfigException) {
                 throw t;
             }
             throw new ConfigException("inject configuration error, " +
-                    "options: " + source.getOptionsClass().getSimpleName() + ", resource: " + source.getResourceName() + ", and ignore it",
-                    t);
+                "options: " + source.getOptionsClass().getSimpleName() + ", resource: " + source.getResourceName() + ", and ignore it",
+                t);
         }
     }
 
@@ -479,7 +519,7 @@ public class ConfigInjector {
             options.update();
         } catch (Throwable t) {
             throw new ConfigException(
-                    "invoke options update method error: " + options.getClass(), t);
+                "invoke options update method error: " + options.getClass(), t);
         } finally {
             this.postUpdate(options);
         }
@@ -504,16 +544,7 @@ public class ConfigInjector {
     }
 
     public synchronized void shutdown() {
-        log.info("Shutdown commons config injector.");
-        if (shutdown) {
-            return;
-        }
-        providerFactory.clear();
-        optionsMap.clear();
-        sourceMap.clear();
-        injectListeners.clear();
-        updateListeners.clear();
-        shutdown = true;
+
     }
 
     public ConfigInjector registerInjectListener(InjectEventListener listener) {
@@ -561,6 +592,24 @@ public class ConfigInjector {
             throw new IllegalStateException("found duplicated registry for source: " + source.getClass());
         }
         sourceMap.put(source, options);
+    }
+
+    private <T> T executeInReadLock(Supplier<T> supplier) {
+        readLock.lock();
+        try {
+            return supplier.get();
+        } finally {
+            readLock.unlock();
+        }
+    }
+
+    private <T> T executeInWriteLock(Supplier<T> supplier) {
+        writeLock.lock();
+        try {
+            return supplier.get();
+        } finally {
+            writeLock.unlock();
+        }
     }
 
 }

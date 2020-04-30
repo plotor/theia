@@ -201,6 +201,7 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
+
 package org.zhenchao.kratos;
 
 import org.apache.commons.lang3.StringUtils;
@@ -230,6 +231,9 @@ public class ConfigManager {
         return INSTANCE;
     }
 
+    /**
+     * @see #initialize(String)
+     */
     public int initialize() throws ConfigException {
         return this.initialize("");
     }
@@ -238,16 +242,17 @@ public class ConfigManager {
      * Initialize the configuration, all {@link Options}s will be injection,
      * exclude the option who's {@link Configurable#autoConfigure()} is false.
      *
-     * @param rootPackage the root package of reflection scanner
+     * @param scanBasePackage the root package of reflection scanner
      * @return number of injected options
      * @throws ConfigException
      */
-    public synchronized int initialize(final String rootPackage) throws ConfigException {
+    public synchronized int initialize(final String scanBasePackage) throws ConfigException {
         if (initialized) {
             throw new ConfigException("already initialized");
         }
         int count = 0;
-        Reflections reflections = StringUtils.isBlank(rootPackage) ? new Reflections() : new Reflections(rootPackage);
+        Reflections reflections = StringUtils.isBlank(scanBasePackage)
+            ? new Reflections() : new Reflections(scanBasePackage);
         final Set<Class<? extends Options>> types = reflections.getSubTypesOf(Options.class);
         for (final Class<? extends Options> optionsType : types) {
             if (Modifier.isAbstract(optionsType.getModifiers())) {
@@ -271,18 +276,32 @@ public class ConfigManager {
                 log.warn("You may want to configure the options[{}] by manual, and skip it.", optionsType);
             }
         }
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                injector.close();
+            } catch (Exception e) {
+                log.error("Close config injector error.", e);
+            }
+        }));
+
+        log.info("Initialized config manager success, " +
+            "scan base package: {}, loaded option count: {}", scanBasePackage, count);
         this.initialized = true;
         return count;
     }
 
     /**
-     * Get options instance by class.
+     * Get option instance by class.
      *
      * @param optionsClass
      * @param <T>
      * @return
      */
     public <T extends Options> T getOptions(Class<T> optionsClass) {
+        if (!initialized) {
+            throw new IllegalStateException("uninitialized config manager");
+        }
         return injector.getOptions(optionsClass);
     }
 
