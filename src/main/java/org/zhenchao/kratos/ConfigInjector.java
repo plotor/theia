@@ -201,7 +201,6 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-
 package org.zhenchao.kratos;
 
 import org.apache.commons.lang3.BooleanUtils;
@@ -227,10 +226,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Supplier;
 
 /**
  * @author zhenchao.wang 2016-12-01 14:22:31
@@ -245,17 +240,13 @@ public class ConfigInjector implements AutoCloseable {
     private final ProviderFactory providerFactory = ProviderFactory.getInstance();
     private PropertiesBuilderFactory builderFactory = new PropertiesBuilderFactory();
 
-    private volatile boolean shutdown;
-
     private final Map<Class<? extends Options>, Options> optionsMap = new ConcurrentHashMap<>();
     private final Map<Source, Options> sourceMap = new ConcurrentHashMap<>();
 
     private final Set<InjectEventListener> injectListeners = new HashSet<>();
     private final Set<UpdateEventListener> updateListeners = new HashSet<>();
 
-    private final ReadWriteLock lock = new ReentrantReadWriteLock();
-    private final Lock readLock = lock.readLock();
-    private final Lock writeLock = lock.writeLock();
+    private volatile boolean shutdown = true;
 
     private ConfigInjector() {
         this.shutdown = false;
@@ -270,64 +261,42 @@ public class ConfigInjector implements AutoCloseable {
      *
      * @return
      */
-    public ConfigInjector reset() {
-        return this.executeInWriteLock(() -> {
-            optionsMap.clear();
-            sourceMap.clear();
-            injectListeners.clear();
-            updateListeners.clear();
-            return INSTANCE;
-        });
-    }
-
-    @Override
-    public void close() throws Exception {
-        writeLock.lock();
-        try {
-            if (shutdown) {
-                return;
-            }
-            log.info("Shutdown config injector.");
-            providerFactory.clear();
-            optionsMap.clear();
-            sourceMap.clear();
-            injectListeners.clear();
-            updateListeners.clear();
-            shutdown = true;
-        } finally {
-            writeLock.unlock();
-        }
+    public synchronized ConfigInjector reset() {
+        optionsMap.clear();
+        sourceMap.clear();
+        injectListeners.clear();
+        updateListeners.clear();
+        return INSTANCE;
     }
 
     /**
-     * Instantiate and config options.
+     * Inject the options, return cached instance if already injected, or created and inject new options instance.
      *
      * @param optionsClass
      * @param <T>
      * @return
      * @throws ConfigException
      */
-    public <T extends Options> ConfigInjector configureBean(final Class<T> optionsClass) throws ConfigException {
+    public synchronized <T extends Options> ConfigInjector configureBean(final Class<T> optionsClass) throws ConfigException {
         Validate.notNull(optionsClass, "null options class");
-        writeLock.lock();
-        try {
-            Options options = optionsMap.get(optionsClass);
-            if (null != options) {
-                return this;
-            }
-            try {
-                log.info("Instantiate options: {}", optionsClass);
-                T instance = optionsClass.newInstance();
-                return this.configureBean(instance);
-            } catch (IllegalAccessException | InstantiationException e) {
-                throw new ConfigException(
-                    "create options bean instance error, class: " + optionsClass, e);
-            }
-        } finally {
-            writeLock.unlock();
+        Options options = optionsMap.get(optionsClass);
+        if (null != options) {
+            return this;
         }
+        try {
+            log.info("Instantiate options: {}", optionsClass);
+            T instance = optionsClass.newInstance();
+            this.doConfigBean(instance, new Source(instance));
+        } catch (IllegalAccessException | InstantiationException e) {
+            throw new ConfigException(
+                "create options bean instance error, class: " + optionsClass, e);
+        }
+        return this;
     }
 
+    /**
+     * @see #configureBean(Options, Source)
+     */
     public ConfigInjector configureBean(final Options options) throws ConfigException {
         return this.configureBean(options, new Source(options));
     }
@@ -339,7 +308,12 @@ public class ConfigInjector implements AutoCloseable {
      * @param source data source
      * @throws ConfigException
      */
-    public ConfigInjector configureBean(final Options options, final Source source) throws ConfigException {
+    public synchronized ConfigInjector configureBean(final Options options, final Source source) throws ConfigException {
+        this.doConfigBean(options, source);
+        return this;
+    }
+
+    private void doConfigBean(final Options options, final Source source) throws ConfigException {
         Validate.notNull(options, "null inject bean");
         Validate.notNull(source, "null source");
 
@@ -349,13 +323,9 @@ public class ConfigInjector implements AutoCloseable {
                 ", but found in source is " + source.getOptionsClass().getSimpleName());
         }
 
-        synchronized (options.getClass()) {
-            if (this.injectBean(options, source, false)) {
-                this.doUpdate(options);
-            }
+        if (this.injectBean(options, source, false)) {
+            this.doUpdate(options);
         }
-
-        return this;
     }
 
     /**
@@ -366,9 +336,8 @@ public class ConfigInjector implements AutoCloseable {
      */
     @SuppressWarnings("unchecked")
     public <T extends Options> T getOptions(final Class<T> optionsClass) {
-        synchronized (optionsClass) {
-            return (T) optionsMap.get(optionsClass);
-        }
+        Validate.notNull(optionsClass, "null options class");
+        return (T) optionsMap.get(optionsClass);
     }
 
     /**
@@ -378,6 +347,9 @@ public class ConfigInjector implements AutoCloseable {
      * @return
      */
     public boolean isConfigured(final Class<? extends Options> optionsClass) {
+        if (null == optionsClass) {
+            return false;
+        }
         return optionsMap.containsKey(optionsClass);
     }
 
@@ -487,22 +459,20 @@ public class ConfigInjector implements AutoCloseable {
     }
 
     /**
-     * Reload configuration, this will be invoked by listener.
+     * Reload configuration one by one, this will be invoked by source listener.
      *
      * @param source
      * @throws ConfigException
      */
-    public void reload(final Source source) throws ConfigException {
+    public synchronized void reload(final Source source) throws ConfigException {
         final Class<? extends Options> optionsClass = source.getOptionsClass();
-        synchronized (optionsClass) {
-            final Options options = this.sourceMap.get(source);
-            if (null == options) {
-                throw new ConfigException("no options instance found, source: " + source);
-            }
-            log.info("Refresh the options[{}], source[{}].", optionsClass.getSimpleName(), source);
-            if (this.injectBean(options, source, true)) {
-                this.doUpdate(options);
-            }
+        final Options options = this.sourceMap.get(source);
+        if (null == options) {
+            throw new ConfigException("no options instance found, source: " + source);
+        }
+        log.info("Refresh the options[{}], source[{}].", optionsClass.getSimpleName(), source);
+        if (this.injectBean(options, source, true)) {
+            this.doUpdate(options);
         }
     }
 
@@ -543,8 +513,18 @@ public class ConfigInjector implements AutoCloseable {
         this.builderFactory = builderFactory;
     }
 
-    public synchronized void shutdown() {
-
+    @Override
+    public synchronized void close() {
+        if (shutdown) {
+            return;
+        }
+        log.info("Shutdown kratos config injector.");
+        providerFactory.clear();
+        optionsMap.clear();
+        sourceMap.clear();
+        injectListeners.clear();
+        updateListeners.clear();
+        shutdown = true;
     }
 
     public ConfigInjector registerInjectListener(InjectEventListener listener) {
@@ -555,26 +535,12 @@ public class ConfigInjector implements AutoCloseable {
         return this;
     }
 
-    public boolean removeInjectListener(InjectEventListener listener) {
-        Validate.notNull(listener, "null inject event listener");
-        synchronized (injectListeners) {
-            return injectListeners.remove(listener);
-        }
-    }
-
     public ConfigInjector registerUpdateListener(UpdateEventListener listener) {
         Validate.notNull(listener, "null update event listener");
         synchronized (updateListeners) {
             updateListeners.add(listener);
         }
         return this;
-    }
-
-    public boolean removeUpdateListener(UpdateEventListener listener) {
-        Validate.notNull(listener, "null update event listener");
-        synchronized (updateListeners) {
-            return updateListeners.remove(listener);
-        }
     }
 
     @TestingVisible
@@ -592,24 +558,6 @@ public class ConfigInjector implements AutoCloseable {
             throw new IllegalStateException("found duplicated registry for source: " + source.getClass());
         }
         sourceMap.put(source, options);
-    }
-
-    private <T> T executeInReadLock(Supplier<T> supplier) {
-        readLock.lock();
-        try {
-            return supplier.get();
-        } finally {
-            readLock.unlock();
-        }
-    }
-
-    private <T> T executeInWriteLock(Supplier<T> supplier) {
-        writeLock.lock();
-        try {
-            return supplier.get();
-        } finally {
-            writeLock.unlock();
-        }
     }
 
 }

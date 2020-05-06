@@ -201,7 +201,6 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-
 package org.zhenchao.kratos;
 
 import org.apache.commons.lang3.StringUtils;
@@ -212,6 +211,9 @@ import org.zhenchao.kratos.error.ConfigException;
 
 import java.lang.reflect.Modifier;
 import java.util.Set;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
  * @author zhenchao.wang 2020-01-17 19:10
@@ -223,6 +225,10 @@ public class ConfigManager {
 
     private static final ConfigManager INSTANCE = new ConfigManager();
 
+    private final ReadWriteLock lock = new ReentrantReadWriteLock();
+    private final Lock readLock = lock.readLock();
+    private final Lock writeLock = lock.writeLock();
+
     private volatile boolean initialized = false;
 
     private final ConfigInjector injector = ConfigInjector.getInstance();
@@ -232,6 +238,10 @@ public class ConfigManager {
     }
 
     /**
+     * Initialize the configuration use default scan package.
+     *
+     * @return
+     * @throws ConfigException
      * @see #initialize(String)
      */
     public int initialize() throws ConfigException {
@@ -242,78 +252,91 @@ public class ConfigManager {
      * Initialize the configuration, all {@link Options}s will be injection,
      * exclude the option who's {@link Configurable#autoConfigure()} is false.
      *
-     * @param scanBasePackage the root package of reflection scanner
+     * @param scanPackage the root package of reflection scanner
      * @return number of injected options
      * @throws ConfigException
      */
-    public synchronized int initialize(final String scanBasePackage) throws ConfigException {
-        if (initialized) {
-            throw new ConfigException("already initialized");
-        }
-        int count = 0;
-        Reflections reflections = StringUtils.isBlank(scanBasePackage)
-            ? new Reflections() : new Reflections(scanBasePackage);
-        final Set<Class<? extends Options>> types = reflections.getSubTypesOf(Options.class);
-        for (final Class<? extends Options> optionsType : types) {
-            if (Modifier.isAbstract(optionsType.getModifiers())) {
-                continue;
+    public int initialize(final String scanPackage) throws ConfigException {
+        writeLock.lock();
+        try {
+            if (initialized) {
+                throw new ConfigException("already initialized");
             }
-
-            if (!optionsType.isAnnotationPresent(Configurable.class)) {
-                throw new ConfigException("missing @" + Configurable.class.getSimpleName() + " annotations: " + optionsType);
-            }
-
-            final Configurable configurable = optionsType.getAnnotation(Configurable.class);
-            if (configurable.autoConfigure()) {
-                if (injector.isConfigured(optionsType)) {
-                    log.debug("Configured options[{}], and skip duplicated registration.", optionsType);
-                } else {
-                    log.info("Auto configure options: {}", optionsType);
-                    injector.configureBean(optionsType);
-                    count++;
+            int count = 0;
+            final Reflections reflections = StringUtils.isNotBlank(scanPackage) ? new Reflections(scanPackage) : new Reflections();
+            final Set<Class<? extends Options>> types = reflections.getSubTypesOf(Options.class);
+            for (final Class<? extends Options> optionsType : types) {
+                if (Modifier.isAbstract(optionsType.getModifiers())) {
+                    continue;
                 }
-            } else {
-                log.warn("You may want to configure the options[{}] by manual, and skip it.", optionsType);
+
+                if (!optionsType.isAnnotationPresent(Configurable.class)) {
+                    throw new ConfigException("missing @" + Configurable.class.getSimpleName() + " annotations: " + optionsType);
+                }
+
+                final Configurable configurable = optionsType.getAnnotation(Configurable.class);
+                if (configurable.autoConfigure()) {
+                    if (injector.isConfigured(optionsType)) {
+                        log.debug("Configured options[{}], and skip duplicated registration.", optionsType);
+                    } else {
+                        log.info("Auto configure options: {}", optionsType);
+                        injector.configureBean(optionsType);
+                        count++;
+                    }
+                } else {
+                    log.warn("You may want to configure the options[{}] by manual, and skip it.", optionsType);
+                }
             }
+
+            Runtime.getRuntime().addShutdownHook(new Thread(injector::close));
+
+            log.info("Initialized config manager success, " +
+                "scan base package: {}, loaded option count: {}", scanPackage, count);
+            this.initialized = true;
+            return count;
+        } finally {
+            writeLock.unlock();
         }
-
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            try {
-                injector.close();
-            } catch (Exception e) {
-                log.error("Close config injector error.", e);
-            }
-        }));
-
-        log.info("Initialized config manager success, " +
-            "scan base package: {}, loaded option count: {}", scanBasePackage, count);
-        this.initialized = true;
-        return count;
     }
 
     /**
-     * Get option instance by class.
+     * Get options instance by class.
      *
      * @param optionsClass
      * @param <T>
      * @return
      */
     public <T extends Options> T getOptions(Class<T> optionsClass) {
-        if (!initialized) {
-            throw new IllegalStateException("uninitialized config manager");
+        readLock.lock();
+        try {
+            this.assertInitialized();
+            return injector.getOptions(optionsClass);
+        } finally {
+            readLock.unlock();
         }
-        return injector.getOptions(optionsClass);
     }
 
     /**
      * Reset configuration, this method will clear all configuration state.
      */
-    public synchronized void reset() {
-        this.initialized = false;
-        injector.reset();
+    public void reset() {
+        writeLock.lock();
+        try {
+            injector.reset();
+            this.initialized = false;
+        } finally {
+            writeLock.unlock();
+        }
     }
 
     public ConfigInjector getInjector() {
         return injector;
     }
+
+    private void assertInitialized() {
+        if (!initialized) {
+            throw new IllegalStateException("uninitialized config manager");
+        }
+    }
+
 }
