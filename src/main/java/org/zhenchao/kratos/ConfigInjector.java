@@ -231,23 +231,22 @@ import java.util.concurrent.ConcurrentHashMap;
  * @author zhenchao.wang 2016-12-01 14:22:31
  * @version 1.0.0
  */
-public class ConfigInjector {
+public class ConfigInjector implements AutoCloseable {
 
     private static final Logger log = LoggerFactory.getLogger(ConfigInjector.class);
 
     private static final ConfigInjector INSTANCE = new ConfigInjector();
 
-    private ProviderFactory providerFactory = ProviderFactory.getInstance();
-
+    private final ProviderFactory providerFactory = ProviderFactory.getInstance();
     private PropertiesBuilderFactory builderFactory = new PropertiesBuilderFactory();
-
-    private volatile boolean shutdown;
 
     private final Map<Class<? extends Options>, Options> optionsMap = new ConcurrentHashMap<>();
     private final Map<Source, Options> sourceMap = new ConcurrentHashMap<>();
 
     private final Set<InjectEventListener> injectListeners = new HashSet<>();
     private final Set<UpdateEventListener> updateListeners = new HashSet<>();
+
+    private volatile boolean shutdown = true;
 
     private ConfigInjector() {
         this.shutdown = false;
@@ -270,24 +269,34 @@ public class ConfigInjector {
         return INSTANCE;
     }
 
-    public <T extends Options> ConfigInjector configureBean(final Class<T> optionsClass) throws ConfigException {
+    /**
+     * Inject the options, return cached instance if already injected, or created and inject new options instance.
+     *
+     * @param optionsClass
+     * @param <T>
+     * @return
+     * @throws ConfigException
+     */
+    public synchronized <T extends Options> ConfigInjector configureBean(final Class<T> optionsClass) throws ConfigException {
         Validate.notNull(optionsClass, "null options class");
-        synchronized (optionsClass) {
-            Options options = optionsMap.get(optionsClass);
-            if (null != options) {
-                return this;
-            }
-            try {
-                log.info("Instantiate options: {}", optionsClass);
-                T instance = optionsClass.newInstance();
-                return this.configureBean(instance);
-            } catch (IllegalAccessException | InstantiationException e) {
-                throw new ConfigException(
-                        "create options bean instance error, class: " + optionsClass, e);
-            }
+        Options options = optionsMap.get(optionsClass);
+        if (null != options) {
+            return this;
         }
+        try {
+            log.info("Instantiate options: {}", optionsClass);
+            T instance = optionsClass.newInstance();
+            this.doConfigBean(instance, new Source(instance));
+        } catch (IllegalAccessException | InstantiationException e) {
+            throw new ConfigException(
+                "create options bean instance error, class: " + optionsClass, e);
+        }
+        return this;
     }
 
+    /**
+     * @see #configureBean(Options, Source)
+     */
     public ConfigInjector configureBean(final Options options) throws ConfigException {
         return this.configureBean(options, new Source(options));
     }
@@ -299,23 +308,24 @@ public class ConfigInjector {
      * @param source data source
      * @throws ConfigException
      */
-    public ConfigInjector configureBean(final Options options, final Source source) throws ConfigException {
+    public synchronized ConfigInjector configureBean(final Options options, final Source source) throws ConfigException {
+        this.doConfigBean(options, source);
+        return this;
+    }
+
+    private void doConfigBean(final Options options, final Source source) throws ConfigException {
         Validate.notNull(options, "null inject bean");
         Validate.notNull(source, "null source");
 
         if (!options.getClass().equals(source.getOptionsClass())) {
             throw new ConfigException("options class mismatch, " +
-                    "expected: " + options.getClass().getSimpleName() +
-                    ", but found in source is " + source.getOptionsClass().getSimpleName());
+                "expected: " + options.getClass().getSimpleName() +
+                ", but found in source is " + source.getOptionsClass().getSimpleName());
         }
 
-        synchronized (options.getClass()) {
-            if (this.injectBean(options, source, false)) {
-                this.doUpdate(options);
-            }
+        if (this.injectBean(options, source, false)) {
+            this.doUpdate(options);
         }
-
-        return this;
     }
 
     /**
@@ -326,9 +336,8 @@ public class ConfigInjector {
      */
     @SuppressWarnings("unchecked")
     public <T extends Options> T getOptions(final Class<T> optionsClass) {
-        synchronized (optionsClass) {
-            return (T) optionsMap.get(optionsClass);
-        }
+        Validate.notNull(optionsClass, "null options class");
+        return (T) optionsMap.get(optionsClass);
     }
 
     /**
@@ -338,6 +347,9 @@ public class ConfigInjector {
      * @return
      */
     public boolean isConfigured(final Class<? extends Options> optionsClass) {
+        if (null == optionsClass) {
+            return false;
+        }
         return optionsMap.containsKey(optionsClass);
     }
 
@@ -376,8 +388,8 @@ public class ConfigInjector {
      */
     private boolean injectBean(final Options options, final Source source, boolean reload) throws ConfigException {
         Validate.isTrue(options.getClass().equals(source.getOptionsClass()),
-                "unexpected options class, expected: " + options.getClass().getSimpleName() +
-                        ", but got: " + source.getOptionsClass().getSimpleName());
+            "unexpected options class, expected: " + options.getClass().getSimpleName() +
+                ", but got: " + source.getOptionsClass().getSimpleName());
 
         log.info("Inject options bean[{}], resource[{}]", options.getClass().getSimpleName(), source.getResourceName());
         SourceProvider provider = providerFactory.getSourceProvider(source);
@@ -389,8 +401,8 @@ public class ConfigInjector {
         try {
             final Properties properties = provider.loadProperties(source, builderFactory.newPropertiesBuilder());
             needInject = !reload
-                    || source.isAutoload()
-                    || BooleanUtils.toBoolean(properties.getProperty(Constants.COMMONS_CONFIG_AUTOLOAD, "false"));
+                || source.isAutoload()
+                || BooleanUtils.toBoolean(properties.getProperty(Constants.COMMONS_CONFIG_AUTOLOAD, "false"));
             if (!needInject) {
                 log.warn("[CONF AUTOLOAD DISABLE] skip reload, source[{}].", source);
                 return false;
@@ -420,20 +432,20 @@ public class ConfigInjector {
     private void tryInjectProperties(final Options options, final Source source, final Properties properties) throws ConfigException {
         try {
             log.info("Try inject and verify the options' copy, " +
-                    "options: {}, resource: {}.", source.getOptionsClass().getSimpleName(), source.getResourceName());
+                "options: {}, resource: {}.", source.getOptionsClass().getSimpleName(), source.getResourceName());
             Options copyOptions = SerializationUtils.clone(options);
             this.injectProperties(copyOptions, properties);
             if (!copyOptions.validate()) {
                 throw new ConfigException("invalid configuration, " +
-                        "options: " + source.getOptionsClass().getSimpleName() + ", resource: " + source.getResourceName() + ", and ignore it");
+                    "options: " + source.getOptionsClass().getSimpleName() + ", resource: " + source.getResourceName() + ", and ignore it");
             }
         } catch (Throwable t) {
             if (t instanceof ConfigException) {
                 throw t;
             }
             throw new ConfigException("inject configuration error, " +
-                    "options: " + source.getOptionsClass().getSimpleName() + ", resource: " + source.getResourceName() + ", and ignore it",
-                    t);
+                "options: " + source.getOptionsClass().getSimpleName() + ", resource: " + source.getResourceName() + ", and ignore it",
+                t);
         }
     }
 
@@ -447,22 +459,20 @@ public class ConfigInjector {
     }
 
     /**
-     * Reload configuration, this will be invoked by listener.
+     * Reload configuration one by one, this will be invoked by source listener.
      *
      * @param source
      * @throws ConfigException
      */
-    public void reload(final Source source) throws ConfigException {
+    public synchronized void reload(final Source source) throws ConfigException {
         final Class<? extends Options> optionsClass = source.getOptionsClass();
-        synchronized (optionsClass) {
-            final Options options = this.sourceMap.get(source);
-            if (null == options) {
-                throw new ConfigException("no options instance found, source: " + source);
-            }
-            log.info("Refresh the options[{}], source[{}].", optionsClass.getSimpleName(), source);
-            if (this.injectBean(options, source, true)) {
-                this.doUpdate(options);
-            }
+        final Options options = this.sourceMap.get(source);
+        if (null == options) {
+            throw new ConfigException("no options instance found, source: " + source);
+        }
+        log.info("Refresh the options[{}], source[{}].", optionsClass.getSimpleName(), source);
+        if (this.injectBean(options, source, true)) {
+            this.doUpdate(options);
         }
     }
 
@@ -479,7 +489,7 @@ public class ConfigInjector {
             options.update();
         } catch (Throwable t) {
             throw new ConfigException(
-                    "invoke options update method error: " + options.getClass(), t);
+                "invoke options update method error: " + options.getClass(), t);
         } finally {
             this.postUpdate(options);
         }
@@ -503,11 +513,12 @@ public class ConfigInjector {
         this.builderFactory = builderFactory;
     }
 
-    public synchronized void shutdown() {
-        log.info("Shutdown commons config injector.");
+    @Override
+    public synchronized void close() {
         if (shutdown) {
             return;
         }
+        log.info("Shutdown kratos config injector.");
         providerFactory.clear();
         optionsMap.clear();
         sourceMap.clear();
@@ -524,26 +535,12 @@ public class ConfigInjector {
         return this;
     }
 
-    public boolean removeInjectListener(InjectEventListener listener) {
-        Validate.notNull(listener, "null inject event listener");
-        synchronized (injectListeners) {
-            return injectListeners.remove(listener);
-        }
-    }
-
     public ConfigInjector registerUpdateListener(UpdateEventListener listener) {
         Validate.notNull(listener, "null update event listener");
         synchronized (updateListeners) {
             updateListeners.add(listener);
         }
         return this;
-    }
-
-    public boolean removeUpdateListener(UpdateEventListener listener) {
-        Validate.notNull(listener, "null update event listener");
-        synchronized (updateListeners) {
-            return updateListeners.remove(listener);
-        }
     }
 
     @TestingVisible

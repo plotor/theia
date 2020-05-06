@@ -210,6 +210,7 @@ import org.apache.curator.retry.ExponentialBackoffRetry;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.zhenchao.kratos.ConfigInjector;
 import org.zhenchao.kratos.constant.Constants;
@@ -224,6 +225,7 @@ import java.util.stream.Collectors;
  * @author zhenchao.wang 2018-09-19 10:39
  * @version 1.0.0
  */
+@Ignore
 public class ZkConfigInjectorTest {
 
     private static final String ROOT_PATH = "/kratos";
@@ -260,8 +262,8 @@ public class ZkConfigInjectorTest {
         Assert.assertEquals(url, defaultOptions.getAccessUrl());
         String[] elems = nums.split(",\\s*");
         Assert.assertEquals(
-                defaultOptions.getSet(),
-                Arrays.stream(nums.split(",\\s*")).map(Integer::parseInt).collect(Collectors.toSet()));
+            defaultOptions.getSet(),
+            Arrays.stream(nums.split(",\\s*")).map(Integer::parseInt).collect(Collectors.toSet()));
         for (int i = 0; i < elems.length; i++) {
             Assert.assertEquals(Integer.valueOf(elems[i]), defaultOptions.nums.get(i));
         }
@@ -274,8 +276,8 @@ public class ZkConfigInjectorTest {
         Assert.assertEquals(url, defaultOptions.getAccessUrl());
         elems = nums.split(",\\s*");
         Assert.assertEquals(
-                defaultOptions.getSet(),
-                Arrays.stream(nums.split(",\\s*")).map(Integer::parseInt).collect(Collectors.toSet()));
+            defaultOptions.getSet(),
+            Arrays.stream(nums.split(",\\s*")).map(Integer::parseInt).collect(Collectors.toSet()));
         for (int i = 0; i < elems.length; i++) {
             Assert.assertEquals(Integer.valueOf(elems[i]), defaultOptions.nums.get(i));
         }
@@ -297,8 +299,8 @@ public class ZkConfigInjectorTest {
         Assert.assertEquals(url, defaultOptions.getAccessUrl());
         String[] elems = nums.split(",\\s*");
         Assert.assertEquals(
-                defaultOptions.getSet(),
-                Arrays.stream(nums.split(",\\s*")).map(Integer::parseInt).collect(Collectors.toSet()));
+            defaultOptions.getSet(),
+            Arrays.stream(nums.split(",\\s*")).map(Integer::parseInt).collect(Collectors.toSet()));
         for (int i = 0; i < elems.length; i++) {
             Assert.assertEquals(Integer.valueOf(elems[i]), defaultOptions.nums.get(i));
         }
@@ -311,8 +313,8 @@ public class ZkConfigInjectorTest {
         Assert.assertEquals(url, defaultOptions.getAccessUrl());
         elems = nums.split(",\\s*");
         Assert.assertEquals(
-                defaultOptions.getSet(),
-                Arrays.stream(nums.split(",\\s*")).map(Integer::parseInt).collect(Collectors.toSet()));
+            defaultOptions.getSet(),
+            Arrays.stream(nums.split(",\\s*")).map(Integer::parseInt).collect(Collectors.toSet()));
         for (int i = 0; i < elems.length; i++) {
             Assert.assertEquals(Integer.valueOf(elems[i]), defaultOptions.nums.get(i));
         }
@@ -338,8 +340,8 @@ public class ZkConfigInjectorTest {
 
         String[] elems = nums.split(",\\s*");
         Assert.assertEquals(
-                defaultOptions.getSet(),
-                Arrays.stream(nums.split(",\\s*")).map(Integer::parseInt).collect(Collectors.toSet()));
+            defaultOptions.getSet(),
+            Arrays.stream(nums.split(",\\s*")).map(Integer::parseInt).collect(Collectors.toSet()));
         for (int i = 0; i < elems.length; i++) {
             Assert.assertEquals(Integer.valueOf(elems[i]), defaultOptions.nums.get(i));
         }
@@ -362,8 +364,8 @@ public class ZkConfigInjectorTest {
 
         elems = nums.split(",\\s*");
         Assert.assertEquals(
-                defaultOptions.getSet(),
-                Arrays.stream(nums.split(",\\s*")).map(Integer::parseInt).collect(Collectors.toSet()));
+            defaultOptions.getSet(),
+            Arrays.stream(nums.split(",\\s*")).map(Integer::parseInt).collect(Collectors.toSet()));
         for (int i = 0; i < elems.length; i++) {
             Assert.assertEquals(Integer.valueOf(elems[i]), defaultOptions.nums.get(i));
         }
