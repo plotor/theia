@@ -201,6 +201,7 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
+
 package org.zhenchao.kratos;
 
 import org.apache.commons.lang3.BooleanUtils;
@@ -433,6 +434,7 @@ public class ConfigInjector implements AutoCloseable {
         try {
             log.info("Try inject and verify the options' copy, " +
                 "options: {}, resource: {}.", source.getOptionsClass().getSimpleName(), source.getResourceName());
+            // TODO is a good idea to impl clone by serialization？
             Options copyOptions = SerializationUtils.clone(options);
             this.injectProperties(copyOptions, properties);
             if (!copyOptions.validate()) {
