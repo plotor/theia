@@ -1,23 +1,22 @@
-# kratos
+# Kratos: Extensible annotation-based configuration injector.
 
-Kratos 是一个注解式配置加载与注入框架，旨在以注解的方式加载任何可以被表示成 [properties](https://docs.oracle.com/cd/E23095_01/Platform.93/ATGProgGuide/html/s0204propertiesfileformat01.html) 格式的配置，并注入给目标对象，同时支持当配置内容发生变更时回调更新。配置文件的来源可以是本地文件，也可以来自网络。Kratos 默认实现了从 ClassPath 加载本地配置文件，并支持以 SPI 的方式扩展以支持更多的配置来源，例如从 ZK 加载配置等。
+Kratos 是一个 java 语言编写的，支持自定义扩展的注解式配置加载与注入组件，旨在以注解的方式加载任何可以被表示成 [properties](https://docs.oracle.com/cd/E23095_01/Platform.93/ATGProgGuide/html/s0204propertiesfileformat01.html) 对象的配置，并注入给目标对象，同时支持当配置内容发生变更时回调更新。配置文件的来源可以是本地文件、网络，以及第三方配置系统。Kratos 默认支持从 ClassPath 加载本地配置文件，并支持以 SPI 的方式扩展以支持更多的配置来源，例如从 ZK 加载配置等。<!-- more -->
 
 特性一览：
 
 - 支持以注解的方式加载多种配置数据源，并注入给配置对象。
-- 支持预注入，预注入会校验配置的合法性，如果不合法则会放弃注入，避免配置出错影响服务。
-- 支持配置变更时的回调更新，并允许用户配置是否启用。
-- 内置基本类型转换器，用于将 String 类型配置项转换成目标类型。
+- 支持预注入，预注入会校验配置的合法性，如果不合法则会放弃注入，避免配置出错影响服务的正常运行。
+- 支持配置变更时回调更新，默认关闭，并允许用户配置是否启用。
+- 内置基本类型转换器，用于将 String 类型配置项转换成目标类型对象。
 - 支持自定义类型转换器，以实现一些定制化的类型转换。
 - 支持以原生字符串或 Properties 对象的形式注入。
 - 支持监听注入过程（InjectEventListener）和更新过程（UpdateEventListener）。
 - 支持加载系统环境变量，并注入给配置对象。
 - 支持 `${}` 占位符替换，使用指定的配置项替换占位符。
 - 支持以 SPI 的方式扩展以支持更多类型的配置数据源。
+- 对于 Spring 应用，支持自动扫描、加载并初始化配置对象。
 
 ---
-
-使用文档：
 
 - [快速接入](#快速接入)
 - [使用指南](#使用指南)
@@ -28,11 +27,11 @@ Kratos 是一个注解式配置加载与注入框架，旨在以注解的方式�
 
 ### 快速接入
 
-这里以加载并注入 ClassPath 配置文件 configurable_options.properties 为例，使用上分为 4 步：
+这里以加载并注入 ClassPath 配置文件 `configurable_options.properties` 为例，接入过程分为 4 步：
 
 1. 定义一个实现了 Options 接口的配置类 ExampleOptions；
 2. 为 ExampleOptions 类添加 `@Configurable` 注解，用于指定配置数据源路径；
-3. 调用 `ConfigManager#initialize` 方法初始化所有被管理的配置项，只允许初始化一次；
+3. 调用 `ConfigManager#initialize` 方法初始化所有被管理的配置项；
 4. 调用 `ConfigManager#getOptions` 方法拿到目标 options 实例，以获取对应的配置信息。
 
 ExampleOptions 的部分实现如下，完整实现可以参考源码：
@@ -101,9 +100,17 @@ System.out.println(options.getPropMessage());
 
 好啦，就这么简单，接下去就可以愉快的使用配置项啦！
 
+如果是 Spring 应用，则只需要在对应的 Options 类上添加 `@Component` 注解，并在 Spring 配置文件中添加如下配置：
+
+```xml
+<bean class="org.zhenchao.kratos.SpringInitializer"/>
+```
+
+Spring 框架在启动期间会自动扫描所有被 `@Component` 注解的配置 Options 类，并完成加载和初始化过程。
+
 ### 使用指南
 
-本小节针对快速接入中的各个步骤进行详细说明。首先来看 __步骤 1__，对于需要需要注入的 options，需要先实现 Options 接口，或继承 AbstractOptions 抽象类，Options 接口定义如下：
+本小节针对快速接入中的各个步骤进行详细说明。首先来看 __步骤 1__ ，对于需要注入的 options，需要先实现 Options 接口，或继承 AbstractOptions 抽象类。Options 接口定义如下：
 
 ```java
 public interface Options extends Serializable {
@@ -123,9 +130,9 @@ public interface Options extends Serializable {
 }
 ```
 
-其中 `Options#update` 方法会在成功完成注入时回调，可以用于对配置字段的二次解析。方法 `Options#validate` 需要由应用自己实现对于配置的合法性校验，该方法会在预注入时调用，如果返回 false 则会放弃后续的正式注入，并抛出异常。
+其中 `Options#update` 方法会在成功完成注入时回调，可以用于对配置字段的二次解析。方法 `Options#validate` 需要由应用自己实现对于配置的合法性校验，该方法会在预注入时调用，如果返回 false 则会放弃后续的正式注入操作，并抛出异常。
 
-然后（__步骤 2__），需要使用 `@Configurable` 注解为 options 关联对应的数据源，该注解定义如下：
+然后（ __步骤 2__ ），需要使用 `@Configurable` 注解为 options 关联对应的数据源，该注解定义如下：
 
 ```java
 public @interface Configurable {
@@ -156,9 +163,9 @@ public @interface Configurable {
 
 配置项 `Configurable#autoConfigure` 默认为 true，表示允许 ConfigManager 在初始化时自动实例化并注入配置项值，否则需要由开发人员自己完成实例化，并主动调用 `ConfigInjector#configureBean(Options)` 方法完成配置项值的注入。
 
-配置项 `Configurable#autoload` 默认为 false，当设置为 true 时则会在每次配置变更时回调执行 `Options#update` 方法，而忽略 `__commons_config_autoload` 配置。该配置项主要应用于加载 raw text 的场景，此时源配置不满足 properties 格式，所以不能简单的添加 `__commons_config_autoload=true` 配置项来控制是否回调更新，这种场景下可以通过 `Configurable#autoload` 配置项来默认启用更新。
+配置项 `Configurable#autoload` 默认为 false，当设置为 true 时则会在每次配置变更时回调执行 `Options#update` 方法，而忽略 `__commons_config_autoload` 配置。该配置项主要应用于加载 raw text 的场景，此时源配置不满足 Properties 文件格式，所以不能简单的添加 `__commons_config_autoload=true` 配置项以控制是否回调更新，这种场景下可以通过 `Configurable#autoload` 配置项来默认启用更新。
 
-完成与数据源的关联之后，接下来（__步骤 3__）需要使用 `@Attribute` 注解为各个字段关联对应的配置项，注解定义如下：
+完成与数据源的关联之后，接下来（ __步骤 3__ ）需要使用 `@Attribute` 注解为各个字段关联对应的配置项，注解定义如下：
 
 ```java
 public @interface Attribute {
@@ -216,7 +223,7 @@ Object | GenericConverter | 将字符串转换成目标类型，相应的类需�
 
 以上转换器无需手动指定，配置库会依据目标类型自动检测，如果手动指定了类型转换器，则优先级更高。
 
-最后（__步骤 4__），需要调用 `ConfigManager#initialize` 方法初始化和注入所有的配置项，如下：
+最后（ __步骤 4__ ），需要调用 `ConfigManager#initialize` 方法初始化和注入所有的配置项，如下：
 
 ```java
 final ConfigManager configManager = ConfigManager.getInstance();
@@ -446,13 +453,13 @@ ConfUtils.registerPrefix("ZK");
 Kratos 在设计和实现上主要分为两大模块：
 
 1. 从数据源拉取配置数据，并封装成 Properties 对象；
-2. 基于反射机制从 Properties 对象中获取对应的配置项并注入目标对象对应的属性上。
+2. 基于反射机制从 Properties 对象中获取对应的配置项并注入给目标对象对应的属性上。
 
 同时监听数据源，当数据源更新时以回调的方式更新本地配置。
 
 整体设计图如下：
 
-<div align=center><img  src="https://www.zhenchao.org/images/2020/kratos.png"/></div>
+![image](https://www.zhenchao.org/images/2020/kratos.png)
 
 SourceProvider 用于从数据源加载配置数据并封装成 Properties 对象，同时注册到对应数据源的监听器以监听配置更新。ConfigInjector 会解析 options 配置，并从 Properties 中获取对应的配置项，调用类型转换器 Converter 转成目标类型，并最终注入到目标 options 中。
 
