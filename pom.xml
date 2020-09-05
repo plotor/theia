@@ -5,10 +5,10 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>org.zhenchao</groupId>
-    <artifactId>kratos</artifactId>
+    <artifactId>theia</artifactId>
     <version>1.0.1-SNAPSHOT</version>
 
-    <name>kratos</name>
+    <name>theia</name>
     <url>https://www.zhenchao.org</url>
 
     <properties>

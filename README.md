@@ -1,6 +1,6 @@
-# Kratos: Extensible annotation-based configuration injector.
+# Theia: Extensible Annotation-based Configuration Injector.
 
-Kratos 是一个 java 语言编写的，支持自定义扩展的注解式配置加载与注入组件，旨在以注解的方式加载任何可以被表示成 [properties](https://docs.oracle.com/cd/E23095_01/Platform.93/ATGProgGuide/html/s0204propertiesfileformat01.html) 对象的配置，并注入给目标对象，同时支持当配置内容发生变更时回调更新。配置文件的来源可以是本地文件、网络，以及第三方配置系统。Kratos 默认支持从 ClassPath 加载本地配置文件，并支持以 SPI 的方式扩展以支持更多的配置来源，例如从 ZK 加载配置等。<!-- more -->
+Theia 是一个 java 语言编写的，支持自定义扩展的注解式配置加载与注入组件，旨在以注解的方式加载任何可以被表示成 [Properties](https://docs.oracle.com/cd/E23095_01/Platform.93/ATGProgGuide/html/s0204propertiesfileformat01.html) 对象的配置，并注入给目标对象，同时支持当配置内容发生变更时回调更新。配置文件的来源可以是本地文件、网络，以及第三方配置系统。Theia 默认支持从 ClassPath 加载本地配置文件，并支持以 SPI 的方式扩展以支持更多的配置来源，例如从 ZK 加载配置等。
 
 特性一览：
 
@@ -91,7 +91,7 @@ public class ExampleOptions extends AbstractOptions {
 ```java
 final ConfigManager configManager = ConfigManager.getInstance();
 // 初始化配置管理器
-configManager.initialize("org.zhenchao.kratos.example");
+configManager.initialize("org.zhenchao.theia.example");
 // 获取 options 实例
 final ExampleOptions options = configManager.getOptions(ExampleOptions.class);
 // 获取具体的配置项
@@ -103,7 +103,7 @@ System.out.println(options.getPropMessage());
 如果是 Spring 应用，则只需要在对应的 Options 类上添加 `@Component` 注解，并在 Spring 配置文件中添加如下配置：
 
 ```xml
-<bean class="org.zhenchao.kratos.SpringInitializer"/>
+<bean class="org.zhenchao.theia.SpringInitializer"/>
 ```
 
 Spring 框架在启动期间会自动扫描所有被 `@Component` 注解的配置 Options 类，并完成加载和初始化过程。
@@ -137,7 +137,7 @@ public interface Options extends Serializable {
 ```java
 public @interface Configurable {
 
-    /** The configuration resource, eg. ZK:/kratos/example */
+    /** The configuration resource, eg. ZK:/theia/example */
     String resource() default "";
 
     /** Alias for {@link #resource()} */
@@ -227,7 +227,7 @@ Object | GenericConverter | 将字符串转换成目标类型，相应的类需�
 
 ```java
 final ConfigManager configManager = ConfigManager.getInstance();
-final int count = configManager.initialize("org.zhenchao.kratos.manager");
+final int count = configManager.initialize("org.zhenchao.theia.manager");
 Assert.assertEquals(4, count);
 Assert.assertNotNull(configManager.getOptions(Options1.class));
 Assert.assertNotNull(configManager.getOptions(Options2.class));
@@ -300,10 +300,10 @@ public interface UpdateEventListener extends EventListener {
 
 ### 如何扩展
 
-除了内建对 ClassPath 路径下配置的加载，Kratos 还允许用户对支持的配置数据源进行扩展。接入一个新的数据源只需要继承 AbstractSourceProvider 抽象类即可，然后在项目的 `/META-INF/services` 目录下新建一个名为 `org.zhenchao.kratos.source.provider.SourceProvider` 的文件，添加以下内容：
+除了内建对 ClassPath 路径下配置的加载，Theia 还允许用户对支持的配置数据源进行扩展。接入一个新的数据源只需要继承 AbstractSourceProvider 抽象类即可，然后在项目的 `/META-INF/services` 目录下新建一个名为 `org.zhenchao.theia.source.provider.SourceProvider` 的文件，添加以下内容：
 
 ```text
-org.zhenchao.kratos.source.provider.ClasspathSourceProvider
+org.zhenchao.theia.source.provider.ClasspathSourceProvider
 // your source provider class name here
 ```
 
@@ -435,11 +435,11 @@ public class ZkSourceProvider extends AbstractSourceProvider implements SourcePr
 }
 ```
 
-然后编写 `/META-INF/services/org.zhenchao.kratos.source.provider.SourceProvider` 文件：
+然后编写 `/META-INF/services/org.zhenchao.theia.source.provider.SourceProvider` 文件：
 
 ```text
-org.zhenchao.kratos.source.provider.ClasspathSourceProvider
-org.zhenchao.kratos.source.provider.ZkSourceProvider
+org.zhenchao.theia.source.provider.ClasspathSourceProvider
+org.zhenchao.theia.source.provider.ZkSourceProvider
 ```
 
 最后一步，注册 prefix 标识（不区分大小写）：
@@ -450,7 +450,7 @@ ConfUtils.registerPrefix("ZK");
 
 ### 实现原理
 
-Kratos 在设计和实现上主要分为两大模块：
+Theia 在设计和实现上主要分为两大模块：
 
 1. 从数据源拉取配置数据，并封装成 Properties 对象；
 2. 基于反射机制从 Properties 对象中获取对应的配置项并注入给目标对象对应的属性上。
@@ -459,7 +459,7 @@ Kratos 在设计和实现上主要分为两大模块：
 
 整体设计图如下：
 
-![image](https://www.zhenchao.org/images/2020/kratos.png)
+![image](/images/2020/theia.png)
 
 SourceProvider 用于从数据源加载配置数据并封装成 Properties 对象，同时注册到对应数据源的监听器以监听配置更新。ConfigInjector 会解析 options 配置，并从 Properties 中获取对应的配置项，调用类型转换器 Converter 转成目标类型，并最终注入到目标 options 中。
 

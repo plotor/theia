@@ -1,0 +1,2 @@
+org.zhenchao.theia.source.provider.ClasspathSourceProvider
+org.zhenchao.theia.source.provider.ZkSourceProvider
