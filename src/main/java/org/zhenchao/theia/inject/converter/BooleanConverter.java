@@ -226,16 +226,16 @@ public class BooleanConverter implements Converter<Boolean> {
     /**
      * Parse {@link String} to {@link Boolean}.
      *
-     * @param value
-     * @return
-     * @throws ConvertException
+     * @param value the value to parse
+     * @return the parsed boolean value
+     * @throws ConvertException if value cannot be parsed
      */
     private boolean parse(String value) throws ConvertException {
         boolean bool = Boolean.parseBoolean(value)
-            || value.equalsIgnoreCase("yes")
-            || value.equalsIgnoreCase("y")
-            || value.equalsIgnoreCase("t")
-            || value.equals("1");
+            || "yes".equalsIgnoreCase(value)
+            || "y".equalsIgnoreCase(value)
+            || "t".equalsIgnoreCase(value)
+            || "1".equals(value);
 
         if (!bool) {
             if (this.notValid(value)) {
@@ -246,10 +246,10 @@ public class BooleanConverter implements Converter<Boolean> {
     }
 
     private boolean notValid(String value) {
-        return !(value.equalsIgnoreCase("false")
-            || value.equalsIgnoreCase("f")
-            || value.equalsIgnoreCase("no")
-            || value.equalsIgnoreCase("n")
-            || value.equals("0"));
+        return !("false".equalsIgnoreCase(value)
+            || "f".equalsIgnoreCase(value)
+            || "no".equalsIgnoreCase(value)
+            || "n".equalsIgnoreCase(value)
+            || "0".equals(value));
     }
 }

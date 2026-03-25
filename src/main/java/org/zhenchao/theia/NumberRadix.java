@@ -218,6 +218,9 @@ import java.lang.annotation.Target;
 @Documented
 public @interface NumberRadix {
 
+    /**
+     * Number format enumeration.
+     */
     enum NumberFormat {
         BINARY(2),
         OCTAL(8),

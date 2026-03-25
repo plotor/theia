@@ -310,9 +310,7 @@ public abstract class AbstractPropertyInjector implements PropertyInjector {
                     converter = ConverterRegistry.getInstance().getBuiltInConverter(fieldType);
                     log.info("Inject filed[{}: {}] value by built-in converter[{}], bean[{}]",
                         propName, propType.getSimpleName(), converter.getClass().getSimpleName(), beanType);
-                }
-                // use custom converter
-                else {
+                } else {
                     converter = converterRegistry.getCustomConverter(customConverter);
                     if (fieldType != converter.supportedClass()) {
                         throw new ConfigException("invalid custom converter: " + customConverter
