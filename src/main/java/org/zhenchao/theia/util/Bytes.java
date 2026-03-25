@@ -53,7 +53,7 @@ public class Bytes {
      * @param b byte array, which can be null
      * @return 0 if b is null, otherwise returns length
      */
-    final public static int len(byte[] b) {
+    public static final int len(byte[] b) {
         return b == null ? 0 : b.length;
     }
 
@@ -425,7 +425,8 @@ public class Bytes {
         if (LexicographicalComparerHolder.UnsafeComparer.littleEndian) {
             val = Long.reverseBytes(val);
         }
-        LexicographicalComparerHolder.UnsafeComparer.theUnsafe.putLong(bytes, (long) offset + LexicographicalComparerHolder.UnsafeComparer.BYTE_ARRAY_BASE_OFFSET, val);
+        LexicographicalComparerHolder.UnsafeComparer.theUnsafe.putLong(
+            bytes, (long) offset + LexicographicalComparerHolder.UnsafeComparer.BYTE_ARRAY_BASE_OFFSET, val);
         return offset + SIZEOF_LONG;
     }
 
@@ -1412,17 +1413,17 @@ public class Bytes {
         final BigInteger splitsBI = BigInteger.valueOf(num + 1);
         //when diffBI < splitBI, use an additional byte to increase diffBI
         if (diffBI.compareTo(splitsBI) < 0) {
-            byte[] aPaddedAdditional = new byte[aPadded.length + 1];
-            byte[] bPaddedAdditional = new byte[bPadded.length + 1];
+            byte[] aPaddedAdd = new byte[aPadded.length + 1];
+            byte[] bPaddedAdd = new byte[bPadded.length + 1];
             for (int i = 0; i < aPadded.length; i++) {
-                aPaddedAdditional[i] = aPadded[i];
+                aPaddedAdd[i] = aPadded[i];
             }
             for (int j = 0; j < bPadded.length; j++) {
-                bPaddedAdditional[j] = bPadded[j];
+                bPaddedAdd[j] = bPadded[j];
             }
-            aPaddedAdditional[aPadded.length] = 0;
-            bPaddedAdditional[bPadded.length] = 0;
-            return iterateOnSplits(aPaddedAdditional, bPaddedAdditional, inclusive, num);
+            aPaddedAdd[aPadded.length] = 0;
+            bPaddedAdd[bPadded.length] = 0;
+            return iterateOnSplits(aPaddedAdd, bPaddedAdd, inclusive, num);
         }
         final BigInteger intervalBI;
         try {
@@ -1713,7 +1714,7 @@ public class Bytes {
             throw new IllegalArgumentException("cannot increment null array");
         }
         for (int i = copy.length - 1; i >= 0; --i) {
-            if (copy[i] == -1) {// -1 is all 1-bits, which is the unsigned maximum
+            if (copy[i] == -1) {
                 copy[i] = 0;
             } else {
                 ++copy[i];

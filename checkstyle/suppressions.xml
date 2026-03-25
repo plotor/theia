@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<!DOCTYPE suppressions PUBLIC
+          "-//Checkstyle//DTD SuppressionXpathFilter Experimental Configuration 1.2//EN"
+          "https://checkstyle.org/dtds/suppressions_1_2_xpath_experimental.dtd">
+
+<suppressions>
+    <suppress checks="LineLength" files=".*[\\/]src[\\/]test[\\/].*"/>
+    <suppress checks="JavadocMethod" files=".*[\\/]src[\\/]test[\\/].*"/>
+    <suppress checks="MissingJavadocMethod" files=".*[\\/]src[\\/]test[\\/].*"/>
+    <suppress checks="MissingJavadocType" files=".*[\\/]src[\\/]test[\\/].*"/>
+    <suppress checks="MagicNumber" files=".*[\\/]src[\\/]test[\\/].*"/>
+    <suppress checks="VisibilityModifier" files=".*[\\/]src[\\/]test[\\/].*"/>
+</suppressions>

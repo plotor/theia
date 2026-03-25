@@ -459,7 +459,7 @@ Theia 在设计和实现上主要分为两大模块：
 
 整体设计图如下：
 
-![image](/images/2020/theia.png)
+![image](./theia.png)
 
 SourceProvider 用于从数据源加载配置数据并封装成 Properties 对象，同时注册到对应数据源的监听器以监听配置更新。ConfigInjector 会解析 options 配置，并从 Properties 中获取对应的配置项，调用类型转换器 Converter 转成目标类型，并最终注入到目标 options 中。
 
