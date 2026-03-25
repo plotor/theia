@@ -1,40 +1,40 @@
-# Theia: Extensible Annotation-based Configuration Injector.
+# Theia: Extensible Annotation-based Configuration Injector
 
-Theia 是一个 java 语言编写的，支持自定义扩展的注解式配置加载与注入组件，旨在以注解的方式加载任何可以被表示成 [Properties](https://docs.oracle.com/cd/E23095_01/Platform.93/ATGProgGuide/html/s0204propertiesfileformat01.html) 对象的配置，并注入给目标对象，同时支持当配置内容发生变更时回调更新。配置文件的来源可以是本地文件、网络，以及第三方配置系统。Theia 默认支持从 ClassPath 加载本地配置文件，并支持以 SPI 的方式扩展以支持更多的配置来源，例如从 ZK 加载配置等。
+Theia is a Java-based, extensible annotation-driven configuration loading and injection component. It is designed to load any configuration that can be represented as a [Properties](https://docs.oracle.com/cd/E23095_01/Platform.93/ATGProgGuide/html/s0204propertiesfileformat01.html) object using annotations and inject it into target objects, with support for callback updates when configuration content changes. Configuration sources can include local files, network resources, and third-party configuration systems. Theia supports loading local configuration files from the ClassPath by default and allows extension via SPI to support additional configuration sources, such as loading configuration from ZooKeeper.
 
-特性一览：
+## Features
 
-- 支持以注解的方式加载多种配置数据源，并注入给配置对象。
-- 支持预注入，预注入会校验配置的合法性，如果不合法则会放弃注入，避免配置出错影响服务的正常运行。
-- 支持配置变更时回调更新，默认关闭，并允许用户配置是否启用。
-- 内置基本类型转换器，用于将 String 类型配置项转换成目标类型对象。
-- 支持自定义类型转换器，以实现一些定制化的类型转换。
-- 支持以原生字符串或 Properties 对象的形式注入。
-- 支持监听注入过程（InjectEventListener）和更新过程（UpdateEventListener）。
-- 支持加载系统环境变量，并注入给配置对象。
-- 支持 `${}` 占位符替换，使用指定的配置项替换占位符。
-- 支持以 SPI 的方式扩展以支持更多类型的配置数据源。
-- 对于 Spring 应用，支持自动扫描、加载并初始化配置对象。
+- Supports loading configuration from multiple data sources via annotations and injecting into configuration objects.
+- Supports pre-injection, which validates configuration legality and aborts injection if invalid, preventing configuration errors from affecting service operation.
+- Supports callback updates when configuration changes (disabled by default, user-configurable).
+- Built-in type converters for converting String type configuration items to target type objects.
+- Supports custom type converters for implementing customized type conversions.
+- Supports injection in the form of raw strings or Properties objects.
+- Supports listening to the injection process (InjectEventListener) and update process (UpdateEventListener).
+- Supports loading system environment variables and injecting into configuration objects.
+- Supports `${}` placeholder replacement, using specified configuration items to replace placeholders.
+- Supports extension via SPI to accommodate more types of configuration data sources.
+- For Spring applications, supports automatic scanning, loading, and initialization of configuration objects.
 
 ---
 
-- [快速接入](#快速接入)
-- [使用指南](#使用指南)
-- [如何扩展](#如何扩展)
-- [实现原理](#实现原理)
-- [注意事项](#注意事项)
-- [鸣谢](#鸣谢)
+- [Quick Start](#quick-start)
+- [User Guide](#user-guide)
+- [How to Extend](#how-to-extend)
+- [Implementation Principles](#implementation-principles)
+- [Notes](#notes)
+- [Acknowledgments](#acknowledgments)
 
-### 快速接入
+### Quick Start
 
-这里以加载并注入 ClassPath 配置文件 `configurable_options.properties` 为例，接入过程分为 4 步：
+Here's an example of loading and injecting a ClassPath configuration file `configurable_options.properties`. The integration process consists of 4 steps:
 
-1. 定义一个实现了 Options 接口的配置类 ExampleOptions；
-2. 为 ExampleOptions 类添加 `@Configurable` 注解，用于指定配置数据源路径；
-3. 调用 `ConfigManager#initialize` 方法初始化所有被管理的配置项；
-4. 调用 `ConfigManager#getOptions` 方法拿到目标 options 实例，以获取对应的配置信息。
+1. Define a configuration class `ExampleOptions` that implements the `Options` interface;
+2. Add the `@Configurable` annotation to the `ExampleOptions` class to specify the configuration data source path;
+3. Call the `ConfigManager#initialize` method to initialize all managed configuration items;
+4. Call the `ConfigManager#getOptions` method to get the target options instance and retrieve the corresponding configuration information.
 
-ExampleOptions 的部分实现如下，完整实现可以参考源码：
+Partial implementation of `ExampleOptions` is shown below. For the complete implementation, please refer to the source code:
 
 ```java
 @Configurable(Constants.CP_PREFIX + "configurable_options")
@@ -71,46 +71,46 @@ public class ExampleOptions extends AbstractOptions {
     @Attribute(converter = SetConverter.class)
     public Set<String> set;
 
-    // ... 省略部分实现
+    // ... partial implementation omitted
 
     @Override
     public void update() {
-        // 当配置发生变更时回调执行此方法
+        // This method will be called back when configuration changes
     }
 
     @Override
     public boolean validate() {
-        // 此处实现配置校验逻辑
+        // Implement configuration validation logic here
     }
 
 }
 ```
 
-初始化配置管理器：
+Initialize the configuration manager:
 
 ```java
 final ConfigManager configManager = ConfigManager.getInstance();
-// 初始化配置管理器
+// Initialize the configuration manager
 configManager.initialize("org.zhenchao.theia.example");
-// 获取 options 实例
+// Get the options instance
 final ExampleOptions options = configManager.getOptions(ExampleOptions.class);
-// 获取具体的配置项
+// Get specific configuration items
 System.out.println(options.getPropMessage());
 ```
 
-好啦，就这么简单，接下去就可以愉快的使用配置项啦！
+That's it! Now you can use the configuration items!
 
-如果是 Spring 应用，则只需要在对应的 Options 类上添加 `@Component` 注解，并在 Spring 配置文件中添加如下配置：
+For Spring applications, simply add the `@Component` annotation to the corresponding Options class and add the following configuration to the Spring configuration file:
 
 ```xml
 <bean class="org.zhenchao.theia.SpringInitializer"/>
 ```
 
-Spring 框架在启动期间会自动扫描所有被 `@Component` 注解的配置 Options 类，并完成加载和初始化过程。
+The Spring framework will automatically scan all Options classes annotated with `@Component` during startup and complete the loading and initialization process.
 
-### 使用指南
+### User Guide
 
-本小节针对快速接入中的各个步骤进行详细说明。首先来看 __步骤 1__ ，对于需要注入的 options，需要先实现 Options 接口，或继承 AbstractOptions 抽象类。Options 接口定义如下：
+This section provides detailed explanations for each step in the quick start guide. First, let's look at **Step 1**: For options that need injection, you must first implement the `Options` interface or extend the `AbstractOptions` abstract class. The `Options` interface is defined as follows:
 
 ```java
 public interface Options extends Serializable {
@@ -130,9 +130,9 @@ public interface Options extends Serializable {
 }
 ```
 
-其中 `Options#update` 方法会在成功完成注入时回调，可以用于对配置字段的二次解析。方法 `Options#validate` 需要由应用自己实现对于配置的合法性校验，该方法会在预注入时调用，如果返回 false 则会放弃后续的正式注入操作，并抛出异常。
+The `Options#update` method will be called back after successful injection and can be used for secondary parsing of configuration fields. The `Options#validate` method needs to be implemented by the application to validate the configuration. This method is called during pre-injection, and if it returns `false`, the subsequent formal injection operation will be aborted and an exception will be thrown.
 
-然后（ __步骤 2__ ），需要使用 `@Configurable` 注解为 options 关联对应的数据源，该注解定义如下：
+Then (**Step 2**), you need to use the `@Configurable` annotation to associate the options with the corresponding data source. The annotation is defined as follows:
 
 ```java
 public @interface Configurable {
@@ -161,11 +161,11 @@ public @interface Configurable {
 }
 ```
 
-配置项 `Configurable#autoConfigure` 默认为 true，表示允许 ConfigManager 在初始化时自动实例化并注入配置项值，否则需要由开发人员自己完成实例化，并主动调用 `ConfigInjector#configureBean(Options)` 方法完成配置项值的注入。
+The configuration item `Configurable#autoConfigure` defaults to `true`, meaning the `ConfigManager` is allowed to automatically instantiate and inject configuration values during initialization. Otherwise, developers need to complete the instantiation themselves and actively call the `ConfigInjector#configureBean(Options)` method to inject configuration values.
 
-配置项 `Configurable#autoload` 默认为 false，当设置为 true 时则会在每次配置变更时回调执行 `Options#update` 方法，而忽略 `__commons_config_autoload` 配置。该配置项主要应用于加载 raw text 的场景，此时源配置不满足 Properties 文件格式，所以不能简单的添加 `__commons_config_autoload=true` 配置项以控制是否回调更新，这种场景下可以通过 `Configurable#autoload` 配置项来默认启用更新。
+The configuration item `Configurable#autoload` defaults to `false`. When set to `true`, the `Options#update` method will be called back on every configuration change, ignoring the `__commons_config_autoload` configuration. This configuration item is mainly used for loading raw text scenarios, where the source configuration does not conform to the Properties file format, so you cannot simply add the `__commons_config_autoload=true` configuration item to control whether to callback for updates. In such scenarios, you can enable updates by default through the `Configurable#autoload` configuration item.
 
-完成与数据源的关联之后，接下来（ __步骤 3__ ）需要使用 `@Attribute` 注解为各个字段关联对应的配置项，注解定义如下：
+After associating with the data source, the next step (**Step 3**) is to use the `@Attribute` annotation to associate each field with the corresponding configuration item. The annotation is defined as follows:
 
 ```java
 public @interface Attribute {
@@ -195,35 +195,35 @@ public @interface Attribute {
 }
 ```
 
-各个配置项说明如下：
+Description of each configuration item:
 
-- `name` 和 `value`：用于将当前 field 与对应的配置项名称进行关联，如果未指定则以当前属性名称作为配置项名称，强烈建议配置。
-- `required`：表示当前配置项是必须的，默认为 true，如果未指定默认值，且对应的配置项缺失则会抛出 ConfigException 异常。
-- `defaultValue`：默认值，如果对应的配置项缺失，则采用默认值注入。
-- `raw`：是否以原生类型（String 或 Properties）进行注入，需要注意的是，一个 options 中只能定义一个 `raw=true` 的配置项，且与一般的注入方式互斥。
-- `converter`：自定义类型转换器，会将 String 类型转换成目标类型后再进行注入。
+- `name` and `value`: Used to associate the current field with the corresponding configuration item name. If not specified, the current attribute name will be used as the configuration item name. Configuration is strongly recommended.
+- `required`: Indicates whether the current configuration item is required. Defaults to `true`. If no default value is specified and the corresponding configuration item is missing, a `ConfigException` will be thrown.
+- `defaultValue`: Default value. If the corresponding configuration item is missing, the default value will be used for injection.
+- `raw`: Whether to inject in raw type (String or Properties). Note that only one `raw=true` configuration item can be defined in an options, and it is mutually exclusive with the general injection method.
+- `converter`: Custom type converter that will convert the String type to the target type before injection.
 
-注解 `@Attribute` 可以修饰 field，也可以修饰 getter 或 setter 方法，如果未明确指定 `name`，则会基于注解的属性或方法（getter 或 setter）自动计算 `name` 值，但是强烈建议手动配置 `name` 值，避免出错。类型转换器不是必须的，配置库内置了对以下类型的自动转换：
+The `@Attribute` annotation can be applied to fields, as well as getter or setter methods. If `name` is not explicitly specified, the `name` value will be automatically calculated based on the annotated attribute or method (getter or setter). However, it is strongly recommended to manually configure the `name` value to avoid errors. Type converters are not mandatory. The configuration library has built-in automatic conversion for the following types:
 
-类型 | 转换器 | 说明
+Type | Converter | Description
 --- | --- | ---
-boolean | BooleanConverter | 用于将字符串转换成 boolean 类型
-char | CharacterConverter | 用于将字符串转换成 char 类型，提取字符串的首字母
-byte | NumberConverter | 用于将字符串转换成 byte 类型，可以使用 `@NumberRadix` 指定原始值的进制类型，默认为 10 进制
-short | NumberConverter | 用于将字符串转换成 short 类型，可以使用 `@NumberRadix` 指定原始值的进制类型，默认为 10 进制
-int | NumberConverter | 用于将字符串转换成 int 类型，可以使用 `@NumberRadix` 指定原始值的进制类型，默认为 10 进制
-long | NumberConverter | 用于将字符串转换成 long 类型，可以使用 `@NumberRadix` 指定原始值的进制类型，默认为 10 进制
-float | NumberConverter | 用于将字符串转换成 float 类型，可以使用 `@NumberRadix` 指定原始值的进制类型，默认为 10 进制
-double | NumberConverter | 用于将字符串转换成 double 类型，可以使用 `@NumberRadix` 指定原始值的进制类型，默认为 10 进制
-String | StringConverter | 以字符串类型进行注入，区别于 raw 类型的 String 注入，后者使用整个配置文件进行注入
-Array | ArrayConverter | 用于将字符串按照英文逗号进行分割，并转换成目标数组类型，仅支持一维数组转换
-Date | DateConverter | 用于将字符串转换成 Date 类型，需要指定 `@DatePattern`
-Calendar | CalendarConverter | 用于将字符串转换成 Calendar 类型，依赖 DateConverter
-Object | GenericConverter | 将字符串转换成目标类型，相应的类需要具备一个包含 String 类型参数的构造方法
+boolean | BooleanConverter | Converts string to boolean type
+char | CharacterConverter | Converts string to char type, extracts the first character of the string
+byte | NumberConverter | Converts string to byte type, can use `@NumberRadix` to specify the radix type of the original value, defaults to decimal
+short | NumberConverter | Converts string to short type, can use `@NumberRadix` to specify the radix type of the original value, defaults to decimal
+int | NumberConverter | Converts string to int type, can use `@NumberRadix` to specify the radix type of the original value, defaults to decimal
+long | NumberConverter | Converts string to long type, can use `@NumberRadix` to specify the radix type of the original value, defaults to decimal
+float | NumberConverter | Converts string to float type, can use `@NumberRadix` to specify the radix type of the original value, defaults to decimal
+double | NumberConverter | Converts string to double type, can use `@NumberRadix` to specify the radix type of the original value, defaults to decimal
+String | StringConverter | Injects as string type, different from raw type String injection, the latter uses the entire configuration file for injection
+Array | ArrayConverter | Splits the string by comma and converts to the target array type, only supports one-dimensional array conversion
+Date | DateConverter | Converts string to Date type, requires specifying `@DatePattern`
+Calendar | CalendarConverter | Converts string to Calendar type, depends on DateConverter
+Object | GenericConverter | Converts string to target type, the corresponding class needs to have a constructor with a String type parameter
 
-以上转换器无需手动指定，配置库会依据目标类型自动检测，如果手动指定了类型转换器，则优先级更高。
+The above converters do not need to be specified manually; the configuration library will automatically detect based on the target type. If a type converter is manually specified, it will have higher priority.
 
-最后（ __步骤 4__ ），需要调用 `ConfigManager#initialize` 方法初始化和注入所有的配置项，如下：
+Finally (**Step 4**), you need to call the `ConfigManager#initialize` method to initialize and inject all configuration items, as follows:
 
 ```java
 final ConfigManager configManager = ConfigManager.getInstance();
@@ -244,13 +244,13 @@ Assert.assertNotNull(configManager.getOptions(Options5.class));
 Assert.assertSame(options5, configManager.getOptions(Options5.class));
 ```
 
-ConfigManager 在执行初始化（即调用 `ConfigManager#initialize` 方法）时允许指定扫描 Options 的根包名，如果没有设置则会扫描所有的包，推荐设置。
+When `ConfigManager` performs initialization (i.e., calling the `ConfigManager#initialize` method), you can specify the root package name for scanning Options. If not set, all packages will be scanned. Setting it is recommended.
 
-ConfigManager 提供了 `ConfigManager#getOptions` 方法用于依据类型获取对应的 options 实例。
+`ConfigManager` provides the `ConfigManager#getOptions` method to get the corresponding options instance by type.
 
-工具类 Parser 定义了 `Parser#toList` 和 `Parser#toSet` 方法，抽象了字符串数组到 List 和 Set 类型的转换，可以依据场景考虑使用。
+The utility class `Parser` defines `Parser#toList` and `Parser#toSet` methods, abstracting the conversion from string arrays to List and Set types, which can be used as needed.
 
-最后来聊聊监听机制，配置库定义了两种监听器：InjectEventListener 和 UpdateEventListener。其中，InjectEventListener 用于监听注入过程，定义如下：
+Finally, let's discuss the listener mechanism. The configuration library defines two types of listeners: `InjectEventListener` and `UpdateEventListener`. `InjectEventListener` is used to listen to the injection process and is defined as follows:
 
 ```java
 public interface InjectEventListener extends EventListener {
@@ -272,9 +272,9 @@ public interface InjectEventListener extends EventListener {
 }
 ```
 
-此类监听器会在执行注入过程前后被调用，可以调用 `ConfigInjector#registerInjectListener` 方法和 `ConfigInjector#removeInjectListener` 方法分别注册和注销监听器。
+This type of listener will be called before and after the injection process. You can call `ConfigInjector#registerInjectListener` method and `ConfigInjector#removeInjectListener` method to register and unregister listeners respectively.
 
-UpdateEventListener 则用于监听更新过程，定义如下：
+`UpdateEventListener` is used to listen to the update process and is defined as follows:
 
 ```java
 public interface UpdateEventListener extends EventListener {
@@ -296,20 +296,20 @@ public interface UpdateEventListener extends EventListener {
 }
 ```
 
-此类监听器会在调用 `Options#update` 方法前后被调用，可以调用 `ConfigInjector#registerUpdateListener` 方法和 `ConfigInjector#removeUpdateListener` 方法分别注册和注销监听器。
+This type of listener will be called before and after calling the `Options#update` method. You can call `ConfigInjector#registerUpdateListener` method and `ConfigInjector#removeUpdateListener` method to register and unregister listeners respectively.
 
-### 如何扩展
+### How to Extend
 
-除了内建对 ClassPath 路径下配置的加载，Theia 还允许用户对支持的配置数据源进行扩展。接入一个新的数据源只需要继承 AbstractSourceProvider 抽象类即可，然后在项目的 `/META-INF/services` 目录下新建一个名为 `org.zhenchao.theia.source.provider.SourceProvider` 的文件，添加以下内容：
+In addition to built-in support for loading configuration from the ClassPath, Theia also allows users to extend the supported configuration data sources. To integrate a new data source, simply extend the `AbstractSourceProvider` abstract class, then create a file named `org.zhenchao.theia.source.provider.SourceProvider` in the project's `/META-INF/services` directory with the following content:
 
 ```text
 org.zhenchao.theia.source.provider.ClasspathSourceProvider
 // your source provider class name here
 ```
 
-配置库基于 jdk 内置的 SPI 机制加载所有的 SourceProvider。最后调用 `ConfUtils#registerPrefix` 静态方法注册对应的 prefix 标识即可。
+The configuration library loads all `SourceProvider` instances based on the JDK's built-in SPI mechanism. Finally, call the `ConfUtils#registerPrefix` static method to register the corresponding prefix identifier.
 
-下面以从 zookeeper 加载配置为例演示如何实现扩展，首先继承 AbstractSourceProvider 实现一个 ZkSourceProvider，如下：
+Below is an example demonstrating how to implement an extension by loading configuration from ZooKeeper. First, extend `AbstractSourceProvider` to implement a `ZkSourceProvider`, as follows:
 
 ```java
 public class ZkSourceProvider extends AbstractSourceProvider implements SourceProvider {
@@ -435,47 +435,47 @@ public class ZkSourceProvider extends AbstractSourceProvider implements SourcePr
 }
 ```
 
-然后编写 `/META-INF/services/org.zhenchao.theia.source.provider.SourceProvider` 文件：
+Then create the `/META-INF/services/org.zhenchao.theia.source.provider.SourceProvider` file:
 
 ```text
 org.zhenchao.theia.source.provider.ClasspathSourceProvider
 org.zhenchao.theia.source.provider.ZkSourceProvider
 ```
 
-最后一步，注册 prefix 标识（不区分大小写）：
+Finally, register the prefix identifier (case-insensitive):
 
 ```java
 ConfUtils.registerPrefix("ZK");
 ```
 
-### 实现原理
+### Implementation Principles
 
-Theia 在设计和实现上主要分为两大模块：
+Theia's design and implementation are mainly divided into two major modules:
 
-1. 从数据源拉取配置数据，并封装成 Properties 对象；
-2. 基于反射机制从 Properties 对象中获取对应的配置项并注入给目标对象对应的属性上。
+1. Fetch configuration data from data sources and encapsulate it into Properties objects;
+2. Use reflection mechanism to retrieve corresponding configuration items from Properties objects and inject them into the corresponding properties of target objects.
 
-同时监听数据源，当数据源更新时以回调的方式更新本地配置。
+At the same time, it listens to data sources and updates local configuration via callbacks when data sources are updated.
 
-整体设计图如下：
+The overall design diagram is as follows:
 
 ![image](./theia.png)
 
-SourceProvider 用于从数据源加载配置数据并封装成 Properties 对象，同时注册到对应数据源的监听器以监听配置更新。ConfigInjector 会解析 options 配置，并从 Properties 中获取对应的配置项，调用类型转换器 Converter 转成目标类型，并最终注入到目标 options 中。
+`SourceProvider` is used to load configuration data from data sources and encapsulate it into Properties objects, while registering listeners to the corresponding data sources to monitor configuration updates. `ConfigInjector` parses options configuration, retrieves corresponding configuration items from Properties, calls type converter `Converter` to convert to the target type, and finally injects into the target options.
 
-### 注意事项
+### Notes
 
-1. 对于同一类 options 而言，不允许注册多个实例，否则会抛出 ConfigException 异常。
-2. 如果希望在注入时支持系统环境变量，可以构造一个 `new PropertiesBuilderFactory(true, true)` 对象，并调用 `ConfigInjector#setBuilderFactory` 方法予以设置。
-3. 方法 `ConfigInjector#reset` 会清空 ConfigInjector 管理的所有 options 实例，但是不会清空对应 options 实例已注入的属性值。
-4. 方法 `ConfigManager#reset` 会在 `ConfigInjector#reset` 的基础上清空 ConfigManager 的初始化状态。
-5. raw 类型是唯一的，且与一般类型互斥。
-6. 不允许注入 static 类型的属性。
-7. 自定义类型转换器的优先级高于系统内建的类型转换器，在实现自定义转换器时请保证代码质量。
-8. 尽量认真实现 `Options#validate` 方法，对配置的正确性严格控制。
-9. 被 ConfigInjector 管理的 options 实例是可能被多线程共享的，最好只允许配置库对实例进行修改。
-10. 请勿在 Listener、`Options#update` 和 `Options#validate` 中实现阻塞逻辑。
+1. For the same type of options, registering multiple instances is not allowed, otherwise a `ConfigException` will be thrown.
+2. If you want to support system environment variables during injection, you can construct a `new PropertiesBuilderFactory(true, true)` object and set it by calling the `ConfigInjector#setBuilderFactory` method.
+3. The `ConfigInjector#reset` method will clear all options instances managed by `ConfigInjector`, but will not clear the already injected attribute values of the corresponding options instances.
+4. The `ConfigManager#reset` method will clear the initialization state of `ConfigManager` in addition to what `ConfigInjector#reset` does.
+5. The raw type is unique and mutually exclusive with general types.
+6. Injecting static type attributes is not allowed.
+7. Custom type converters have higher priority than system built-in type converters. Please ensure code quality when implementing custom converters.
+8. Carefully implement the `Options#validate` method to strictly control the correctness of configuration.
+9. Options instances managed by `ConfigInjector` may be shared by multiple threads, so it's best to only allow the configuration library to modify instances.
+10. Do not implement blocking logic in Listeners, `Options#update`, and `Options#validate`.
 
-### 鸣谢
+### Acknowledgments
 
-设计灵感来自 [zlib-config](https://github.com/rchargel/zlib-config)，在此表示感谢。
+Design inspiration comes from [zlib-config](https://github.com/rchargel/zlib-config). Thanks for the contribution.

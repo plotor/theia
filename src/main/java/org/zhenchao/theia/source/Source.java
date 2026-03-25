@@ -213,10 +213,26 @@ import org.zhenchao.theia.util.ConfUtils;
 import java.util.Objects;
 
 /**
- * Data source.
+ * Represents a configuration data source.
+ * <p>
+ * A {@code Source} encapsulates the information needed to locate and load configuration:
+ * the options class, resource name, and autoload settings. Sources are typically created
+ * from {@link Options} classes annotated with {@link Configurable}.
+ * </p>
+ *
+ * <p>Example:</p>
+ * <pre>{@code
+ * // Created automatically from Options instance
+ * Source source = new Source(myOptions);
+ *
+ * // Created manually with specific resource
+ * Source source = new Source(MyOptions.class, "CLASSPATH:my_config", true);
+ * }</pre>
  *
  * @author zhenchao.wang 2016-12-01 14:58:03
  * @version 1.0.0
+ * @see Configurable
+ * @see SourceProvider
  */
 public final class Source {
 
@@ -224,6 +240,15 @@ public final class Source {
     private final String resourceName;
     private final boolean autoload;
 
+    /**
+     * Creates a source from an existing options instance.
+     * <p>
+     * Extracts configuration from the options class's {@link Configurable} annotation.
+     * </p>
+     *
+     * @param options the options instance
+     * @throws IllegalStateException if the options class lacks {@link Configurable} annotation
+     */
     public Source(final Options options) {
         Validate.notNull(options, "null options");
         Class<? extends Options> optionsClass = options.getClass();
@@ -242,10 +267,23 @@ public final class Source {
         this.autoload = configurable.autoload();
     }
 
+    /**
+     * Creates a source with the specified options class and resource name.
+     *
+     * @param optionsClass the options class
+     * @param resourceName the resource location (e.g., "CLASSPATH:my_config")
+     */
     public Source(Class<? extends Options> optionsClass, String resourceName) {
         this(optionsClass, resourceName, false);
     }
 
+    /**
+     * Creates a source with full configuration.
+     *
+     * @param optionsClass the options class
+     * @param resourceName the resource location
+     * @param autoload whether to automatically reload on changes
+     */
     public Source(Class<? extends Options> optionsClass, String resourceName, boolean autoload) {
         this.verification(optionsClass, resourceName);
         this.optionsClass = optionsClass;
@@ -253,14 +291,29 @@ public final class Source {
         this.autoload = autoload;
     }
 
+    /**
+     * Returns the options class associated with this source.
+     *
+     * @return the options class
+     */
     public Class<? extends Options> getOptionsClass() {
         return this.optionsClass;
     }
 
+    /**
+     * Returns the resource name/location.
+     *
+     * @return the resource name
+     */
     public String getResourceName() {
         return this.resourceName;
     }
 
+    /**
+     * Returns whether automatic reloading is enabled for this source.
+     *
+     * @return {@code true} if autoload is enabled
+     */
     public boolean isAutoload() {
         return autoload;
     }

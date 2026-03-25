@@ -201,7 +201,6 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-
 package org.zhenchao.theia.example;
 
 import org.zhenchao.theia.ConfigManager;
@@ -214,11 +213,11 @@ public class TheiaMain {
 
     public static void main(String[] args) throws Exception {
         final ConfigManager configManager = ConfigManager.getInstance();
-        // 初始化配置管理器
+        // Initialize the configuration manager
         configManager.initialize("org.zhenchao.theia.example");
-        // 获取 options 实例
+        // Get the options instance
         final ExampleOptions options = configManager.getOptions(ExampleOptions.class);
-        // 获取具体的配置项
+        // Get specific configuration items
         System.out.println(options.getPropMessage());
     }
 

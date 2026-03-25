@@ -206,20 +206,55 @@ package org.zhenchao.theia;
 import java.io.Serializable;
 
 /**
+ * Base interface for all configuration options classes.
+ * <p>
+ * All configuration classes must implement this interface or extend {@link AbstractOptions}.
+ * The interface extends {@link Serializable} to support deep copy via serialization.
+ * </p>
+ *
+ * <p>Example usage:</p>
+ * <pre>{@code
+ * @Configurable("CLASSPATH:my_config")
+ * public class MyOptions extends AbstractOptions {
+ *     @Attribute
+ *     private String host;
+ *
+ *     @Attribute(defaultValue = "8080")
+ *     private int port;
+ *
+ *     @Override
+ *     public boolean validate() {
+ *         return host != null && port > 0;
+ *     }
+ * }
+ * }</pre>
+ *
  * @author zhenchao.wang 2020-01-10 15:17
  * @version 1.0.0
+ * @see AbstractOptions
+ * @see Configurable
+ * @see Attribute
  */
 public interface Options extends Serializable {
 
     /**
-     * This method will be invoked after successfully injected.
+     * Callback method invoked after successful configuration injection.
+     * <p>
+     * This method can be used for secondary processing of configuration fields,
+     * such as building derived values or initializing internal state.
+     * </p>
      */
     void update();
 
     /**
-     * Validate that the configuration is correctly.
+     * Validates the configuration values.
+     * <p>
+     * This method is called during pre-injection to verify configuration correctness.
+     * If it returns {@code false}, the injection will be aborted and a
+     * {@link org.zhenchao.theia.error.ConfigException} will be thrown.
+     * </p>
      *
-     * @return {@code true} means correctly, or {@code false}.
+     * @return {@code true} if configuration is valid, {@code false} otherwise
      */
     boolean validate();
 

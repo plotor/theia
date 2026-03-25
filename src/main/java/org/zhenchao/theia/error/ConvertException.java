@@ -204,28 +204,62 @@
 package org.zhenchao.theia.error;
 
 /**
+ * Exception thrown when type conversion fails during configuration injection.
+ * <p>
+ * This exception is thrown by {@link org.zhenchao.theia.inject.converter.Converter}
+ * implementations when they cannot convert a string value to the target type.
+ * </p>
+ *
  * @author zhenchao.wang 2020-01-10 15:06
  * @version 1.0.0
+ * @see org.zhenchao.theia.inject.converter.Converter
  */
 public class ConvertException extends Exception {
 
     private static final long serialVersionUID = 3990949217950210964L;
 
+    /**
+     * Constructs a new convert exception with no message.
+     */
     public ConvertException() {
     }
 
+    /**
+     * Constructs a new convert exception with the specified message.
+     *
+     * @param message the error message
+     */
     public ConvertException(String message) {
         super(message);
     }
 
+    /**
+     * Constructs a new convert exception with the specified message and cause.
+     *
+     * @param message the error message
+     * @param cause the cause of the exception
+     */
     public ConvertException(String message, Throwable cause) {
         super(message, cause);
     }
 
+    /**
+     * Constructs a new convert exception with the specified cause.
+     *
+     * @param cause the cause of the exception
+     */
     public ConvertException(Throwable cause) {
         super(cause);
     }
 
+    /**
+     * Constructs a new convert exception with full control over exception properties.
+     *
+     * @param message the error message
+     * @param cause the cause of the exception
+     * @param enableSuppression whether suppression is enabled
+     * @param writableStackTrace whether the stack trace is writable
+     */
     public ConvertException(String message, Throwable cause,
                             boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);

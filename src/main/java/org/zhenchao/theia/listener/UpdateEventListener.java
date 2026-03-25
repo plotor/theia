@@ -208,24 +208,45 @@ import org.zhenchao.theia.Options;
 import java.util.EventListener;
 
 /**
- * Update configuration listener.
+ * Listener interface for configuration update events.
+ * <p>
+ * Implementations can be registered with {@link org.zhenchao.theia.ConfigInjector}
+ * to receive callbacks before and after {@link Options#update()} is invoked.
+ * </p>
+ *
+ * <p>Example:</p>
+ * <pre>{@code
+ * configInjector.registerUpdateListener(new UpdateEventListener() {
+ *     @Override
+ *     public void prevHandle(Options options) {
+ *         // Called before update()
+ *     }
+ *
+ *     @Override
+ *     public void postHandle(Options options) {
+ *         // Called after update()
+ *     }
+ * });
+ * }</pre>
  *
  * @author zhenchao.wang 2017-09-07 16:31:13
  * @version 1.0.0
+ * @see InjectEventListener
+ * @see Options#update()
  */
 public interface UpdateEventListener extends EventListener {
 
     /**
-     * This method will be invoked before update.
+     * Called before {@link Options#update()} is invoked.
      *
-     * @param options The options bean that will be updated.
+     * @param options the options bean that will be updated
      */
     void prevHandle(Options options);
 
     /**
-     * This method will be invoked after update.
+     * Called after {@link Options#update()} has been invoked.
      *
-     * @param options The options bean that has been updated.
+     * @param options the options bean that has been updated
      */
     void postHandle(Options options);
 

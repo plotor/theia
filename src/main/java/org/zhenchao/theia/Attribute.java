@@ -214,34 +214,115 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * Annotation for marking fields or setter methods that should be injected with configuration values.
+ * <p>
+ * This annotation can be applied to fields or setter methods in classes implementing {@link Options}.
+ * The configuration value will be automatically injected during the configuration loading process.
+ * </p>
+ *
+ * <p>Example usage:</p>
+ * <pre>{@code
+ * @Configurable("CLASSPATH:database_config")
+ * public class DatabaseOptions extends AbstractOptions {
+ *
+ *     // Basic usage - property name derived from field name
+ *     @Attribute
+ *     private String host;
+ *
+ *     // Custom property name
+ *     @Attribute(name = "db.port")
+ *     private int port;
+ *
+ *     // With default value
+ *     @Attribute(defaultValue = "10")
+ *     private int connectionTimeout;
+ *
+ *     // Optional field (not required)
+ *     @Attribute(required = false)
+ *     private String description;
+ *
+ *     // Custom converter
+ *     @Attribute(converter = ListConverter.class)
+ *     private List<Integer> ports;
+ *
+ *     // Raw injection - inject entire Properties object
+ *     @Attribute(raw = true)
+ *     private Properties rawConfig;
+ * }
+ * }</pre>
+ *
  * @author zhenchao.wang 2016-09-06 09:10:54
  * @version 1.0.0
+ * @see Configurable
+ * @see Converter
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.METHOD})
 @Documented
 public @interface Attribute {
 
-    /** Property name */
+    /**
+     * The configuration property name to look up.
+     * <p>
+     * If empty, the field name or setter method property name will be used.
+     * </p>
+     *
+     * @return the property name, empty string to use default
+     */
     String name() default "";
 
-    /** Alias for {@link #name()} */
+    /**
+     * Alias for {@link #name()}.
+     *
+     * @return the property name
+     */
     String value() default "";
 
     /**
-     * Configure required.
+     * Whether this field is required to have a configured value.
+     * <p>
+     * If {@code true} and no value is found (and no default is specified),
+     * a {@link ConfigException} will be thrown during injection.
+     * </p>
      *
-     * {@code true} means this field must be configured, otherwise will throw {@link ConfigException}.
+     * @return {@code true} if required (default), {@code false} if optional
      */
     boolean required() default true;
 
-    /** The default value when missing config. */
+    /**
+     * The default value to use when no configuration is found.
+     * <p>
+     * This value will be converted to the target field type automatically.
+     * </p>
+     *
+     * @return the default value, empty string means no default
+     */
     String defaultValue() default "";
 
-    /** Whether inject this field with {@link java.util.Properties} or {@link String} raw type. */
+    /**
+     * Whether to inject raw configuration data.
+     * <p>
+     * If {@code true}, the field will be injected with either:
+     * <ul>
+     *   <li>{@link java.util.Properties} - containing all configuration properties</li>
+     *   <li>{@link String} - containing the raw configuration content</li>
+     * </ul>
+     * This is mutually exclusive with regular type injection.
+     * </p>
+     *
+     * @return {@code true} for raw injection, {@code false} for type-based injection
+     */
     boolean raw() default false;
 
-    /** Convert the string to target field type. */
+    /**
+     * Custom converter for transforming string value to target type.
+     * <p>
+     * By default, built-in converters handle common types (String, Integer, Long, etc.).
+     * Specify a custom converter for complex types or special conversion logic.
+     * </p>
+     *
+     * @return the converter class to use, {@link VoidConverter} for default behavior
+     */
     Class<? extends Converter> converter() default VoidConverter.class;
 
 }

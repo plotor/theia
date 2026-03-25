@@ -228,8 +228,29 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * Core component responsible for configuration injection and lifecycle management.
+ * <p>
+ * {@code ConfigInjector} handles the actual injection of configuration values into
+ * {@link Options} instances. It manages the registration, retrieval, and reloading
+ * of configuration beans.
+ * </p>
+ *
+ * <p>Key responsibilities:</p>
+ * <ul>
+ *   <li>Loading configuration from various sources (CLASSPATH, ZK, HTTP)</li>
+ *   <li>Injecting values into {@link Options} fields marked with {@link Attribute}</li>
+ *   <li>Validating configuration before injection</li>
+ *   <li>Managing configuration reload on source changes</li>
+ *   <li>Notifying listeners of injection and update events</li>
+ * </ul>
+ *
+ * <p>This class is typically accessed through {@link ConfigManager#getInjector()}.</p>
+ *
  * @author zhenchao.wang 2016-12-01 14:22:31
  * @version 1.0.0
+ * @see ConfigManager
+ * @see Options
+ * @see Source
  */
 public class ConfigInjector implements AutoCloseable {
 
@@ -252,14 +273,23 @@ public class ConfigInjector implements AutoCloseable {
         this.shutdown = false;
     }
 
+    /**
+     * Returns the singleton instance of {@code ConfigInjector}.
+     *
+     * @return the singleton instance
+     */
     public static ConfigInjector getInstance() {
         return INSTANCE;
     }
 
     /**
-     * Reset the state of the {@link ConfigInjector}.
+     * Resets the injector to its initial state.
+     * <p>
+     * Clears all registered options, sources, and listeners.
+     * Useful for testing or complete reconfiguration.
+     * </p>
      *
-     * @return
+     * @return this injector instance for method chaining
      */
     public synchronized ConfigInjector reset() {
         optionsMap.clear();
@@ -270,12 +300,16 @@ public class ConfigInjector implements AutoCloseable {
     }
 
     /**
-     * Inject the options, return cached instance if already injected, or created and inject new options instance.
+     * Configures an options class by creating a new instance and injecting values.
+     * <p>
+     * If the options class is already configured, returns the cached instance.
+     * The source is derived from the options class's {@link Configurable} annotation.
+     * </p>
      *
-     * @param optionsClass
-     * @param <T>
-     * @return
-     * @throws ConfigException
+     * @param optionsClass the options class to configure
+     * @param <T> the type of options
+     * @return this injector instance for method chaining
+     * @throws ConfigException if instantiation or injection fails
      */
     public synchronized <T extends Options> ConfigInjector configureBean(final Class<T> optionsClass) throws ConfigException {
         Validate.notNull(optionsClass, "null options class");
@@ -295,6 +329,11 @@ public class ConfigInjector implements AutoCloseable {
     }
 
     /**
+     * Configures an existing options instance using a source derived from its {@link Configurable} annotation.
+     *
+     * @param options the options instance to configure
+     * @return this injector instance for method chaining
+     * @throws ConfigException if configuration fails
      * @see #configureBean(Options, Source)
      */
     public ConfigInjector configureBean(final Options options) throws ConfigException {
@@ -302,11 +341,16 @@ public class ConfigInjector implements AutoCloseable {
     }
 
     /**
-     * Inject the target options bean by {@link Source} object.
+     * Configures an existing options instance with a specific source.
+     * <p>
+     * This method allows manual configuration with a custom source,
+     * useful for testing or dynamic configuration scenarios.
+     * </p>
      *
-     * @param options target options bean instance
-     * @param source data source
-     * @throws ConfigException
+     * @param options the options instance to configure
+     * @param source the configuration source
+     * @return this injector instance for method chaining
+     * @throws ConfigException if configuration fails or class mismatch
      */
     public synchronized ConfigInjector configureBean(final Options options, final Source source) throws ConfigException {
         this.doConfigBean(options, source);
@@ -329,10 +373,11 @@ public class ConfigInjector implements AutoCloseable {
     }
 
     /**
-     * Get the options instance, which is managed by {@link ConfigInjector}.
+     * Retrieves a configured options instance by its class.
      *
-     * @param optionsClass
-     * @return
+     * @param optionsClass the class of the options to retrieve
+     * @param <T> the type of options
+     * @return the configured options instance, or {@code null} if not configured
      */
     @SuppressWarnings("unchecked")
     public <T extends Options> T getOptions(final Class<T> optionsClass) {
@@ -341,10 +386,10 @@ public class ConfigInjector implements AutoCloseable {
     }
 
     /**
-     * Check if the specify options is configured.
+     * Checks if an options class has been configured.
      *
-     * @param optionsClass
-     * @return
+     * @param optionsClass the options class to check
+     * @return {@code true} if configured, {@code false} otherwise
      */
     public boolean isConfigured(final Class<? extends Options> optionsClass) {
         if (null == optionsClass) {
@@ -433,7 +478,6 @@ public class ConfigInjector implements AutoCloseable {
         try {
             log.info("Try inject and verify the options' copy, " +
                 "options: {}, resource: {}.", source.getOptionsClass().getSimpleName(), source.getResourceName());
-            // TODO is a good idea to impl clone by serialization？
             Options copyOptions = SerializationUtils.clone(options);
             this.injectProperties(copyOptions, properties);
             if (!copyOptions.validate()) {
@@ -460,10 +504,14 @@ public class ConfigInjector implements AutoCloseable {
     }
 
     /**
-     * Reload configuration one by one, this will be invoked by source listener.
+     * Reloads configuration for a specific source.
+     * <p>
+     * This method is typically invoked by source listeners when configuration changes are detected.
+     * The options instance must have been previously configured.
+     * </p>
      *
-     * @param source
-     * @throws ConfigException
+     * @param source the source to reload
+     * @throws ConfigException if reload fails or options not found
      */
     public synchronized void reload(final Source source) throws ConfigException {
         final Class<? extends Options> optionsClass = source.getOptionsClass();
@@ -510,10 +558,22 @@ public class ConfigInjector implements AutoCloseable {
         }
     }
 
+    /**
+     * Sets the properties builder factory for creating properties builders.
+     *
+     * @param builderFactory the factory to use
+     */
     public void setBuilderFactory(PropertiesBuilderFactory builderFactory) {
         this.builderFactory = builderFactory;
     }
 
+    /**
+     * Closes the injector and releases all resources.
+     * <p>
+     * This method clears all providers, options, sources, and listeners.
+     * After closing, the injector should not be used.
+     * </p>
+     */
     @Override
     public synchronized void close() {
         if (shutdown) {
@@ -528,6 +588,15 @@ public class ConfigInjector implements AutoCloseable {
         shutdown = true;
     }
 
+    /**
+     * Registers a listener to be notified of injection events.
+     * <p>
+     * Listeners are invoked before and after configuration injection.
+     * </p>
+     *
+     * @param listener the listener to register
+     * @return this injector instance for method chaining
+     */
     public ConfigInjector registerInjectListener(InjectEventListener listener) {
         Validate.notNull(listener, "null inject event listener");
         synchronized (injectListeners) {
@@ -536,6 +605,15 @@ public class ConfigInjector implements AutoCloseable {
         return this;
     }
 
+    /**
+     * Registers a listener to be notified of update events.
+     * <p>
+     * Listeners are invoked before and after {@link Options#update()} is called.
+     * </p>
+     *
+     * @param listener the listener to register
+     * @return this injector instance for method chaining
+     */
     public ConfigInjector registerUpdateListener(UpdateEventListener listener) {
         Validate.notNull(listener, "null update event listener");
         synchronized (updateListeners) {
@@ -544,6 +622,14 @@ public class ConfigInjector implements AutoCloseable {
         return this;
     }
 
+    /**
+     * Returns all registered sources.
+     * <p>
+     * This method is primarily for testing purposes.
+     * </p>
+     *
+     * @return collection of registered sources
+     */
     @TestingVisible
     public Collection<Source> listOptionsSource() {
         return this.sourceMap.keySet();

@@ -208,24 +208,45 @@ import org.zhenchao.theia.Options;
 import java.util.EventListener;
 
 /**
- * Inject configuration listener.
+ * Listener interface for configuration injection events.
+ * <p>
+ * Implementations can be registered with {@link org.zhenchao.theia.ConfigInjector}
+ * to receive callbacks before and after configuration injection.
+ * </p>
+ *
+ * <p>Example:</p>
+ * <pre>{@code
+ * configInjector.registerInjectListener(new InjectEventListener() {
+ *     @Override
+ *     public void prevHandle(Options options) {
+ *         // Called before injection
+ *     }
+ *
+ *     @Override
+ *     public void postHandle(Options options) {
+ *         // Called after injection
+ *     }
+ * });
+ * }</pre>
  *
  * @author zhenchao.wang 2017-09-07 16:30:32
  * @version 1.0.0
+ * @see UpdateEventListener
+ * @see org.zhenchao.theia.ConfigInjector
  */
 public interface InjectEventListener extends EventListener {
 
     /**
-     * This method will be invoked before injection.
+     * Called before configuration values are injected into the options.
      *
-     * @param options The options bean that will be injected.
+     * @param options the options bean that will be injected
      */
     void prevHandle(final Options options);
 
     /**
-     * This method will be invoked after injection.
+     * Called after configuration values have been injected into the options.
      *
-     * @param options The options bean that has been injected.
+     * @param options the options bean that has been injected
      */
     void postHandle(final Options options);
 

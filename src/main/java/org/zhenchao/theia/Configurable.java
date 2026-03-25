@@ -203,8 +203,6 @@
  */
 package org.zhenchao.theia;
 
-import org.zhenchao.theia.constant.Constants;
-
 import java.lang.annotation.Documented;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -212,32 +210,95 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 /**
+ * Annotation for marking classes as configurable options that should be loaded from a specific source.
+ * <p>
+ * Classes annotated with {@code @Configurable} will be automatically discovered and configured
+ * by the {@link ConfigManager} during initialization.
+ * </p>
+ *
+ * <p>Supported source types:</p>
+ * <ul>
+ *   <li><b>CLASSPATH:</b> - Load from classpath resource, e.g., {@code "CLASSPATH:my_config.properties"}</li>
+ *   <li><b>ZK:</b> - Load from ZooKeeper, e.g., {@code "ZK:/theia/config"}</li>
+ *   <li><b>HTTP:</b> - Load from HTTP endpoint, e.g., {@code "HTTP:http://example.com/config"}</li>
+ * </ul>
+ *
+ * <p>Example usage:</p>
+ * <pre>{@code
+ * // Basic usage with classpath resource
+ * @Configurable("CLASSPATH:database_config")
+ * public class DatabaseOptions extends AbstractOptions {
+ *     @Attribute private String host;
+ *     @Attribute private int port;
+ * }
+ *
+ * // Using value alias
+ * @Configurable(value = "CLASSPATH:cache_config", autoConfigure = true)
+ * public class CacheOptions extends AbstractOptions { ... }
+ *
+ * // Manual configuration (not auto-configured)
+ * @Configurable(value = "ZK:/myapp/config", autoConfigure = false)
+ * public class ManualOptions extends AbstractOptions { ... }
+ *
+ * // Auto-reload on source change
+ * @Configurable(value = "ZK:/myapp/dynamic", autoload = true)
+ * public class DynamicOptions extends AbstractOptions { ... }
+ * }</pre>
+ *
  * @author zhenchao.wang 2016-09-06 09:07
  * @version 1.0.0
+ * @see Options
+ * @see Attribute
+ * @see ConfigManager
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 @Documented
 public @interface Configurable {
 
-    /** The configuration resource, eg. ZK:/theia/example */
+    /**
+     * The configuration resource location.
+     * <p>
+     * Format: {@code "<TYPE>:<PATH>"}
+     * <ul>
+     *   <li>{@code "CLASSPATH:filename"} - Load from classpath</li>
+     *   <li>{@code "ZK:/path"} - Load from ZooKeeper</li>
+     *   <li>{@code "HTTP://url"} - Load from HTTP endpoint</li>
+     * </ul>
+     * </p>
+     *
+     * @return the resource location string
+     */
     String resource() default "";
 
-    /** Alias for {@link #resource()} */
+    /**
+     * Alias for {@link #resource()}.
+     *
+     * @return the resource location string
+     */
     String value() default "";
 
     /**
-     * Auto configure setting.
+     * Whether to automatically configure this options class during initialization.
+     * <p>
+     * If {@code true} (default), the options will be automatically detected,
+     * instantiated, and configured when {@link ConfigManager#initialize()} is called.
+     * If {@code false}, you must manually instantiate and configure the options.
+     * </p>
      *
-     * {@code true} means the options will be detected and auto injected,
-     * otherwise you should instantiate and configure the options by manual.
+     * @return {@code true} for auto-configuration (default), {@code false} for manual
      */
     boolean autoConfigure() default true;
 
     /**
-     * Autoload configuration when found source update.
-     * {@code true} means ignore the {@link Constants#COMMONS_CONFIG_AUTOLOAD} config,
-     * default is {@link false}.
+     * Whether to automatically reload configuration when source changes.
+     * <p>
+     * If {@code true}, this options will be automatically reloaded when the
+     * configuration source is updated, ignoring the global autoload setting.
+     * Requires the source provider to support change notifications.
+     * </p>
+     *
+     * @return {@code true} to enable auto-reload, {@code false} (default) otherwise
      */
     boolean autoload() default false;
 

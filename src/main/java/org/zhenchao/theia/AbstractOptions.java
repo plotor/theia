@@ -204,18 +204,48 @@
 package org.zhenchao.theia;
 
 /**
+ * Abstract base implementation of {@link Options} interface.
+ * <p>
+ * Provides default implementations for {@link #update()} and {@link #validate()} methods.
+ * Subclasses can override these methods to provide custom behavior.
+ * </p>
+ *
+ * <p>Example:</p>
+ * <pre>{@code
+ * @Configurable("CLASSPATH:app_config")
+ * public class AppConfig extends AbstractOptions {
+ *     @Attribute
+ *     private String serverUrl;
+ *
+ *     @Override
+ *     public boolean validate() {
+ *         return serverUrl != null && serverUrl.startsWith("http");
+ *     }
+ * }
+ * }</pre>
+ *
  * @author zhenchao.wang 2020-01-14 13:24
  * @version 1.0.0
+ * @see Options
  */
 public abstract class AbstractOptions implements Options {
 
     private static final long serialVersionUID = 225332297232914090L;
 
+    /**
+     * Default empty implementation.
+     * Subclasses can override to perform post-injection processing.
+     */
     @Override
     public void update() {
-
     }
 
+    /**
+     * Default implementation that always returns {@code true}.
+     * Subclasses should override to provide actual validation logic.
+     *
+     * @return {@code true} by default
+     */
     @Override
     public boolean validate() {
         return true;

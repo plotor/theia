@@ -204,6 +204,13 @@
 package org.zhenchao.theia.error;
 
 /**
+ * Exception thrown when configuration loading or injection fails.
+ * <p>
+ * This exception is thrown by {@link org.zhenchao.theia.ConfigManager} and
+ * {@link org.zhenchao.theia.ConfigInjector} when configuration operations fail,
+ * such as missing required fields, validation failures, or source loading errors.
+ * </p>
+ *
  * @author zhenchao.wang 2017-09-05 16:29:19
  * @version 1.0.0
  */
@@ -211,21 +218,48 @@ public class ConfigException extends Exception {
 
     private static final long serialVersionUID = -265369713951433169L;
 
+    /**
+     * Constructs a new config exception with no message.
+     */
     public ConfigException() {
     }
 
+    /**
+     * Constructs a new config exception with the specified message.
+     *
+     * @param message the error message
+     */
     public ConfigException(String message) {
         super(message);
     }
 
+    /**
+     * Constructs a new config exception with the specified message and cause.
+     *
+     * @param message the error message
+     * @param cause the cause of the exception
+     */
     public ConfigException(String message, Throwable cause) {
         super(message, cause);
     }
 
+    /**
+     * Constructs a new config exception with the specified cause.
+     *
+     * @param cause the cause of the exception
+     */
     public ConfigException(Throwable cause) {
         super(cause);
     }
 
+    /**
+     * Constructs a new config exception with full control over exception properties.
+     *
+     * @param message the error message
+     * @param cause the cause of the exception
+     * @param enableSuppression whether suppression is enabled
+     * @param writableStackTrace whether the stack trace is writable
+     */
     public ConfigException(String message, Throwable cause,
                            boolean enableSuppression, boolean writableStackTrace) {
         super(message, cause, enableSuppression, writableStackTrace);
