@@ -216,8 +216,32 @@ import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 /**
+ * Central manager for configuration loading and access.
+ * <p>
+ * {@code ConfigManager} is a singleton that manages the lifecycle of all {@link Options} instances.
+ * It provides initialization, retrieval, and reset functionality for configuration management.
+ * </p>
+ *
+ * <p>Typical usage:</p>
+ * <pre>{@code
+ * // Initialize with default scan package (scans all classes)
+ * ConfigManager.getInstance().initialize();
+ *
+ * // Initialize with specific package for faster scanning
+ * ConfigManager.getInstance().initialize("com.myapp.config");
+ *
+ * // Get configured options instance
+ * MyOptions options = ConfigManager.getInstance().getOptions(MyOptions.class);
+ * String host = options.getHost();
+ * }</pre>
+ *
+ * <p>Thread-safety: This class is thread-safe for all public methods.</p>
+ *
  * @author zhenchao.wang 2020-01-17 19:10
  * @version 1.0.0
+ * @see ConfigInjector
+ * @see Options
+ * @see Configurable
  */
 public class ConfigManager {
 
@@ -233,15 +257,24 @@ public class ConfigManager {
 
     private final ConfigInjector injector = ConfigInjector.getInstance();
 
+    /**
+     * Returns the singleton instance of {@code ConfigManager}.
+     *
+     * @return the singleton instance
+     */
     public static ConfigManager getInstance() {
         return INSTANCE;
     }
 
     /**
-     * Initialize the configuration use default scan package.
+     * Initializes the configuration manager using default package scanning.
+     * <p>
+     * Scans all classes in the classpath for {@link Options} implementations.
+     * For faster initialization, use {@link #initialize(String)} with a specific package.
+     * </p>
      *
-     * @return
-     * @throws ConfigException
+     * @return the number of options classes configured
+     * @throws ConfigException if initialization fails or already initialized
      * @see #initialize(String)
      */
     public int initialize() throws ConfigException {
@@ -249,12 +282,15 @@ public class ConfigManager {
     }
 
     /**
-     * Initialize the configuration, all {@link Options}s will be injection,
-     * exclude the option who's {@link Configurable#autoConfigure()} is false.
+     * Initializes the configuration manager with specified package scanning.
+     * <p>
+     * All {@link Options} implementations with {@link Configurable} annotation will be
+     * automatically configured, except those with {@code autoConfigure = false}.
+     * </p>
      *
-     * @param scanPackage the root package of reflection scanner
-     * @return number of injected options
-     * @throws ConfigException
+     * @param scanPackage the root package for reflection scanning, empty string for full classpath scan
+     * @return the number of options classes configured
+     * @throws ConfigException if initialization fails, already initialized, or missing annotations
      */
     public int initialize(final String scanPackage) throws ConfigException {
         writeLock.lock();
@@ -300,11 +336,15 @@ public class ConfigManager {
     }
 
     /**
-     * Get options instance by class.
+     * Retrieves a configured options instance by its class.
+     * <p>
+     * The options must have been configured during initialization or manually.
+     * </p>
      *
-     * @param optionsClass
-     * @param <T>
-     * @return
+     * @param optionsClass the class of the options to retrieve
+     * @param <T> the type of options
+     * @return the configured options instance
+     * @throws IllegalStateException if the manager has not been initialized
      */
     public <T extends Options> T getOptions(Class<T> optionsClass) {
         readLock.lock();
@@ -317,7 +357,11 @@ public class ConfigManager {
     }
 
     /**
-     * Reset configuration, this method will clear all configuration state.
+     * Resets the configuration manager to its initial state.
+     * <p>
+     * This clears all configured options and allows re-initialization.
+     * Useful for testing or dynamic reconfiguration scenarios.
+     * </p>
      */
     public void reset() {
         writeLock.lock();
@@ -329,6 +373,15 @@ public class ConfigManager {
         }
     }
 
+    /**
+     * Returns the underlying {@link ConfigInjector} instance.
+     * <p>
+     * Use this for advanced configuration operations like manual bean configuration
+     * or registering event listeners.
+     * </p>
+     *
+     * @return the config injector instance
+     */
     public ConfigInjector getInjector() {
         return injector;
     }

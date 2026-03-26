@@ -207,25 +207,58 @@ import org.zhenchao.theia.error.ConvertException;
 import org.zhenchao.theia.inject.BeanProperty;
 
 /**
+ * Interface for converting string configuration values to target types.
+ * <p>
+ * Converters are used during configuration injection to transform string values
+ * from configuration sources into the appropriate field types. Built-in converters
+ * handle common types like String, Integer, Long, Boolean, etc.
+ * </p>
+ *
+ * <p>Custom converters can be specified using the {@link org.zhenchao.theia.Attribute#converter()} attribute:</p>
+ * <pre>{@code
+ * public class ListConverter implements Converter<List<Integer>> {
+ *     @Override
+ *     public List<Integer> convert(String value, BeanProperty property) {
+ *         return Arrays.stream(value.split(","))
+ *             .map(Integer::parseInt)
+ *             .collect(Collectors.toList());
+ *     }
+ *
+ *     @Override
+ *     public Class<?> supportedClass() {
+ *         return List.class;
+ *     }
+ * }
+ *
+ * @Attribute(converter = ListConverter.class)
+ * private List<Integer> ports;
+ * }</pre>
+ *
+ * @param <T> the target type this converter produces
  * @author zhenchao.wang 2016-09-07 09:19:22
  * @version 1.0.0
+ * @see ConverterRegistry
+ * @see org.zhenchao.theia.Attribute
  */
 public interface Converter<T> {
 
     /**
-     * Convert {@link String} value to target type.
+     * Converts a string value to the target type.
      *
-     * @param value
-     * @param property
-     * @return
-     * @throws ConvertException
+     * @param value the string value to convert
+     * @param property the bean property being injected (provides context)
+     * @return the converted value
+     * @throws ConvertException if conversion fails
      */
     T convert(String value, final BeanProperty property) throws ConvertException;
 
     /**
-     * The supported class of the current {@link Converter}.
+     * Returns the class that this converter supports.
+     * <p>
+     * Used by {@link ConverterRegistry} to match converters to field types.
+     * </p>
      *
-     * @return
+     * @return the supported target class
      */
     Class<?> supportedClass();
 

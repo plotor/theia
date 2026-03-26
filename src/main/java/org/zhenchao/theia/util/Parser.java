@@ -211,13 +211,39 @@ import org.slf4j.LoggerFactory;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 /**
+ * Utility class for parsing configuration string arrays into collections.
+ * <p>
+ * Provides methods to parse comma-separated or delimited string arrays into
+ * {@link List}, {@link Set}, and {@link Map} collections with support for
+ * type conversion and validation.
+ * </p>
+ *
+ * <p>Example usage:</p>
+ * <pre>{@code
+ * // Parse to List
+ * String[] values = {"a", "b", "c"};
+ * List<String> list = Parser.toList(values, "myList", s -> s);
+ * List<Integer> ints = Parser.toList(values, "myInts", Integer::parseInt, i -> i > 0);
+ *
+ * // Parse to Set
+ * Set<String> set = Parser.toSet(values, "mySet", s -> s.trim());
+ *
+ * // Parse to Map
+ * String[] entries = {"key1=value1", "key2=value2"};
+ * Map<String, String> map = Parser.toMap(entries, "myMap", "=");
+ * Map<Integer, Long> typedMap = Parser.toMap(entries, "myMap", "=",
+ *     Integer::parseInt, Long::parseLong);
+ * }</pre>
+ *
  * @author zhenchao.wang 2018-11-02 09:55
  * @version 1.0.0
  */
@@ -227,14 +253,41 @@ public class Parser {
 
     /* parse to list */
 
+    /**
+     * Parses a string array to a list of strings with validation.
+     *
+     * @param elements the string array to parse
+     * @param name the configuration item name (for logging)
+     * @param predicate validation predicate for each element
+     * @return the parsed list
+     */
     public static List<String> toList(String[] elements, String name, Predicate<String> predicate) {
         return toList(elements, name, element -> null == element ? null : element.trim(), predicate);
     }
 
+    /**
+     * Parses a string array to a list with type conversion.
+     *
+     * @param elements the string array to parse
+     * @param name the configuration item name (for logging)
+     * @param function conversion function from String to target type
+     * @param <T> the target element type
+     * @return the parsed list
+     */
     public static <T> List<T> toList(String[] elements, String name, Function<String, T> function) {
         return toList(elements, name, function, element -> true);
     }
 
+    /**
+     * Parses a string array to a list with type conversion and validation.
+     *
+     * @param elements the string array to parse
+     * @param name the configuration item name (for logging)
+     * @param function conversion function from String to target type
+     * @param predicate validation predicate for converted values
+     * @param <T> the target element type
+     * @return the parsed list
+     */
     public static <T> List<T> toList(String[] elements, String name, Function<String, T> function, Predicate<T> predicate) {
         log.debug("Parse conf item '{}' to list, value[{}]", name, Arrays.toString(elements));
         if (ArrayUtils.isEmpty(elements)) {
@@ -259,14 +312,41 @@ public class Parser {
 
     /* parse to set */
 
+    /**
+     * Parses a string array to a set of strings with validation.
+     *
+     * @param elements the string array to parse
+     * @param name the configuration item name (for logging)
+     * @param predicate validation predicate for each element
+     * @return the parsed set
+     */
     public static Set<String> toSet(String[] elements, String name, Predicate<String> predicate) {
         return toSet(elements, name, element -> null == element ? null : element.trim(), predicate);
     }
 
+    /**
+     * Parses a string array to a set with type conversion.
+     *
+     * @param elements the string array to parse
+     * @param name the configuration item name (for logging)
+     * @param function conversion function from String to target type
+     * @param <T> the target element type
+     * @return the parsed set
+     */
     public static <T> Set<T> toSet(String[] elements, String name, Function<String, T> function) {
         return toSet(elements, name, function, element -> true);
     }
 
+    /**
+     * Parses a string array to a set with type conversion and validation.
+     *
+     * @param elements the string array to parse
+     * @param name the configuration item name (for logging)
+     * @param function conversion function from String to target type
+     * @param predicate validation predicate for converted values
+     * @param <T> the target element type
+     * @return the parsed set
+     */
     public static <T> Set<T> toSet(String[] elements, String name, Function<String, T> function, Predicate<T> predicate) {
         log.debug("Parse conf item '{}' to set, value[{}]", name, Arrays.toString(elements));
         if (ArrayUtils.isEmpty(elements)) {
@@ -291,6 +371,95 @@ public class Parser {
 
     /* parse to map */
 
-    // TODO add parse to map, by zhenchao 2020-01-15 18:30:09
+    /**
+     * Parses a string array to a map with key validation.
+     * <p>
+     * Each element should be in "key&lt;separator&gt;value" format.
+     * </p>
+     *
+     * @param elements the string array to parse
+     * @param name the configuration item name (for logging)
+     * @param separator the delimiter between key and value
+     * @param keyPredicate validation predicate for keys
+     * @return the parsed map
+     */
+    public static Map<String, String> toMap(String[] elements, String name, String separator, Predicate<String> keyPredicate) {
+        return toMap(elements, name, separator, key -> key, value -> value, keyPredicate, value -> true);
+    }
+
+    /**
+     * Parses a string array to a map with type conversion.
+     * <p>
+     * Each element should be in "key&lt;separator&gt;value" format.
+     * </p>
+     *
+     * @param elements the string array to parse
+     * @param name the configuration item name (for logging)
+     * @param separator the delimiter between key and value
+     * @param keyFunction conversion function for keys
+     * @param valueFunction conversion function for values
+     * @param <K> the key type
+     * @param <V> the value type
+     * @return the parsed map
+     */
+    public static <K, V> Map<K, V> toMap(String[] elements, String name, String separator,
+                                         Function<String, K> keyFunction, Function<String, V> valueFunction) {
+        return toMap(elements, name, separator, keyFunction, valueFunction, key -> true, value -> true);
+    }
+
+    /**
+     * Parses a string array to a map with type conversion and validation.
+     * <p>
+     * Each element should be in "key&lt;separator&gt;value" format.
+     * Elements that don't match the format or fail validation are logged and skipped.
+     * </p>
+     *
+     * @param elements the string array to parse
+     * @param name the configuration item name (for logging)
+     * @param separator the delimiter between key and value
+     * @param keyFunction conversion function for keys
+     * @param valueFunction conversion function for values
+     * @param keyPredicate validation predicate for keys
+     * @param valuePredicate validation predicate for values
+     * @param <K> the key type
+     * @param <V> the value type
+     * @return the parsed map
+     */
+    public static <K, V> Map<K, V> toMap(String[] elements, String name, String separator,
+                                         Function<String, K> keyFunction, Function<String, V> valueFunction,
+                                         Predicate<K> keyPredicate, Predicate<V> valuePredicate) {
+        log.debug("Parse conf item '{}' to map, value[{}]", name, Arrays.toString(elements));
+        if (ArrayUtils.isEmpty(elements)) {
+            return Collections.emptyMap();
+        }
+        Map<K, V> map = new HashMap<>();
+        for (final String element : elements) {
+            if (StringUtils.isBlank(element)) {
+                continue;
+            }
+            String[] parts = element.split(separator, 2);
+            if (parts.length != 2) {
+                log.error("[{}] add to map error, invalid format[{}], expected 'key{}value'", name, element, separator);
+                continue;
+            }
+            String keyStr = parts[0].trim();
+            String valueStr = parts[1].trim();
+            if (StringUtils.isBlank(keyStr)) {
+                log.error("[{}] add to map error, empty key in element[{}]", name, element);
+                continue;
+            }
+            K key = keyFunction.apply(keyStr);
+            V value = valueFunction.apply(valueStr);
+            boolean keyValid = keyPredicate.test(key);
+            boolean valueValid = valuePredicate.test(value);
+            if (keyValid && valueValid) {
+                log.info("[{}] add to map, key[{}], value[{}]", name, key, value);
+                map.put(key, value);
+            } else {
+                log.error("[{}] add to map error, illegal key[{}] or value[{}]", name, key, value);
+            }
+        }
+        return map;
+    }
 
 }

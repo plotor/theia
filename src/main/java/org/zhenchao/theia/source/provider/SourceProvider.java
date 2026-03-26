@@ -210,43 +210,69 @@ import org.zhenchao.theia.source.Source;
 import java.util.Properties;
 
 /**
+ * Interface for providers that load configuration from specific source types.
+ * <p>
+ * Implementations handle loading configuration from different sources such as
+ * classpath files, ZooKeeper nodes, HTTP endpoints, etc. Providers are discovered
+ * via Java SPI ({@link java.util.ServiceLoader}) and selected based on source type.
+ * </p>
+ *
+ * <p>Implementations must:</p>
+ * <ul>
+ *   <li>Implement {@link #support(Source)} to indicate which sources they handle</li>
+ *   <li>Implement {@link #priority()} for provider selection when multiple match</li>
+ *   <li>Be registered via META-INF/services/org.zhenchao.theia.source.provider.SourceProvider</li>
+ * </ul>
+ *
  * @author zhenchao.wang 2016-09-06 11:46:12
  * @version 1.0.0
+ * @see Source
+ * @see ProviderFactory
  */
 public interface SourceProvider extends Comparable<SourceProvider> {
 
     /**
-     * Invoke in initialize.
+     * Called during provider initialization.
+     * <p>
+     * Use this method to perform any setup required before loading configurations.
+     * </p>
      */
     void onInitialize();
 
     /**
-     * Load configuration from source, and convert to properties by {@link PropertiesBuilder}.
+     * Loads configuration from the source and converts to Properties.
      *
-     * @param source
-     * @param builder
-     * @return
-     * @throws ConfigException
+     * @param source the configuration source
+     * @param builder the properties builder for constructing the result
+     * @return the loaded properties
+     * @throws ConfigException if loading fails
      */
     Properties loadProperties(final Source source, final PropertiesBuilder builder) throws ConfigException;
 
     /**
-     * Check if the source is supported by current provider.
+     * Checks if this provider supports the given source.
      *
-     * @param source
-     * @return
+     * @param source the source to check
+     * @return {@code true} if this provider can handle the source
      */
     boolean support(final Source source);
 
     /**
-     * The priority of the source, the higher value mean the higher priority.
+     * Returns the priority of this provider.
+     * <p>
+     * Higher values indicate higher priority. When multiple providers support
+     * a source, the one with the highest priority is selected.
+     * </p>
      *
-     * @return
+     * @return the priority value
      */
     int priority();
 
     /**
-     * Invoke on destroy.
+     * Called during provider shutdown.
+     * <p>
+     * Use this method to release any resources held by the provider.
+     * </p>
      */
     void onDestroy();
 

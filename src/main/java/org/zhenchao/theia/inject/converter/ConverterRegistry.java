@@ -209,8 +209,26 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
+ * Registry for managing built-in and custom converters.
+ * <p>
+ * Maintains a registry of {@link Converter} instances for type conversion during
+ * configuration injection. Built-in converters handle common types, while custom
+ * converters can be registered for application-specific types.
+ * </p>
+ *
+ * <p>This is a singleton class accessed via {@link #getInstance()}.</p>
+ *
+ * <p>Built-in converters include:</p>
+ * <ul>
+ *   <li>String, Boolean, Character</li>
+ *   <li>Byte, Short, Integer, Long, Float, Double</li>
+ *   <li>Date, Calendar</li>
+ *   <li>Arrays of supported types</li>
+ * </ul>
+ *
  * @author zhenchao.wang 2016-09-06 09:44
  * @version 1.0.0
+ * @see Converter
  */
 public class ConverterRegistry {
 
@@ -223,26 +241,33 @@ public class ConverterRegistry {
         this.init();
     }
 
+    /**
+     * Returns the singleton registry instance.
+     *
+     * @return the registry instance
+     */
     public static ConverterRegistry getInstance() {
         return INSTANCE;
     }
 
     /**
-     * Register built-in converter.
+     * Registers a built-in converter.
      *
-     * @param converter
-     * @return
+     * @param converter the converter to register
+     * @return this registry for method chaining
+     * @throws IllegalStateException if a converter is already registered for the supported class
      */
     public ConverterRegistry register(final Converter<?> converter) {
         return this.register(converter, true);
     }
 
     /**
-     * Register built-in or custom converter.
+     * Registers a converter as built-in or custom.
      *
-     * @param converter
-     * @param builtIn
-     * @return
+     * @param converter the converter to register
+     * @param builtIn {@code true} for built-in, {@code false} for custom
+     * @return this registry for method chaining
+     * @throws IllegalStateException if built-in and a converter already exists for the class
      */
     public ConverterRegistry register(final Converter<?> converter, boolean builtIn) {
         Validate.notNull(converter, "null converter");
@@ -263,10 +288,15 @@ public class ConverterRegistry {
     }
 
     /**
-     * Get built-in converter by field class.
+     * Gets a built-in converter for the specified type.
+     * <p>
+     * For array types, creates an appropriate array converter.
+     * Falls back to {@link GenericConverter} if no specific converter is found.
+     * </p>
      *
-     * @param supportedClass filed type.
-     * @return {@link GenericConverter} will be used if no suitable converter found.
+     * @param supportedClass the target field type
+     * @param <T> the type
+     * @return the converter for the type
      */
     @SuppressWarnings("unchecked")
     public <T> Converter<T> getBuiltInConverter(Class<T> supportedClass) {
@@ -285,11 +315,15 @@ public class ConverterRegistry {
     }
 
     /**
-     * Get custom converter by converter class.
+     * Gets or creates a custom converter by its class.
+     * <p>
+     * If the converter is not already registered, creates a new instance
+     * using the default constructor.
+     * </p>
      *
-     * @param converterClass
-     * @return
-     * @throws IllegalStateException the custom converter class must defined a public default constructor.
+     * @param converterClass the converter class
+     * @return the converter instance
+     * @throws IllegalStateException if instantiation fails
      */
     public Converter<?> getCustomConverter(Class<? extends Converter> converterClass) {
         Validate.notNull(converterClass, "null converter class");

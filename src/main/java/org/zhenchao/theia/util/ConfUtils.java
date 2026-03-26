@@ -216,6 +216,12 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
+ * Utility class for configuration-related operations.
+ * <p>
+ * Provides helper methods for resource prefix validation, type conversion,
+ * and properties manipulation.
+ * </p>
+ *
  * @author zhenchao.wang 2020-01-10 15:42
  * @version 1.0.0
  */
@@ -228,6 +234,12 @@ public class ConfUtils {
         PREFIX_SET.add(Constants.CP_PREFIX);
     }
 
+    /**
+     * Registers a new resource prefix.
+     *
+     * @param prefix the prefix to register (will be uppercased)
+     * @return {@code true} if registered successfully, {@code false} if blank
+     */
     public static boolean registerPrefix(String prefix) {
         if (StringUtils.isBlank(prefix)) {
             return false;
@@ -236,25 +248,55 @@ public class ConfUtils {
         return true;
     }
 
+    /**
+     * Checks if a prefix is valid (registered).
+     *
+     * @param prefix the prefix to check
+     * @return {@code true} if valid, {@code false} otherwise
+     */
     public static boolean isValidPrefix(String prefix) {
         prefix = prefix.endsWith(Constants.DELIMITER) ? prefix : (prefix + Constants.DELIMITER);
         return PREFIX_SET.contains(prefix.toUpperCase());
     }
 
+    /**
+     * Checks if a prefix is invalid (not registered).
+     *
+     * @param prefix the prefix to check
+     * @return {@code true} if invalid, {@code false} if valid
+     */
     public static boolean notValidPrefix(String prefix) {
         return !isValidPrefix(prefix);
     }
 
+    /**
+     * Checks if a resource name refers to a ZooKeeper resource.
+     *
+     * @param resourceName the resource name to check
+     * @return {@code true} if ZooKeeper resource
+     */
     public static boolean isZkResource(final String resourceName) {
         return StringUtils.startsWithIgnoreCase(resourceName, Constants.ZK_PREFIX)
             && resourceName.length() > Constants.ZK_PREFIX.length();
     }
 
+    /**
+     * Checks if a resource name refers to a classpath resource.
+     *
+     * @param resourceName the resource name to check
+     * @return {@code true} if classpath resource
+     */
     public static boolean isClassPathResource(final String resourceName) {
         return StringUtils.startsWithIgnoreCase(resourceName, Constants.CP_PREFIX)
             && resourceName.length() > Constants.CP_PREFIX.length();
     }
 
+    /**
+     * Converts Properties to a Map.
+     *
+     * @param properties the properties to convert
+     * @return a map with string keys and values
+     */
     public static Map<String, String> toMap(Properties properties) {
         return properties.entrySet().stream()
             .filter(entry -> Objects.nonNull(entry.getKey()))
@@ -263,6 +305,12 @@ public class ConfUtils {
                 entry -> null == entry.getValue() ? "" : String.valueOf(entry.getValue())));
     }
 
+    /**
+     * Converts Properties to a string representation.
+     *
+     * @param properties the properties to convert
+     * @return string with each entry on a new line
+     */
     public static String toString(Properties properties) {
         List<String> items = new ArrayList<>();
         properties.forEach((name, value) -> {
@@ -272,6 +320,12 @@ public class ConfUtils {
         return items.stream().collect(Collectors.joining(System.lineSeparator()));
     }
 
+    /**
+     * Returns the default value for a primitive type.
+     *
+     * @param primitiveType the primitive type class
+     * @return the default value for that type
+     */
     public static Object resolveDefaultValue(final Class<?> primitiveType) {
         if (boolean.class == primitiveType) {
             return Boolean.FALSE;

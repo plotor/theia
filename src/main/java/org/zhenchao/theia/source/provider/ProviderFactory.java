@@ -216,10 +216,17 @@ import java.util.Optional;
 import java.util.ServiceLoader;
 
 /**
- * {@link SourceProvider} factory.
+ * Factory for discovering and managing {@link SourceProvider} instances.
+ * <p>
+ * Uses Java SPI ({@link java.util.ServiceLoader}) to discover available providers.
+ * Providers are sorted by priority, with higher priority providers selected first.
+ * </p>
+ *
+ * <p>This is a singleton class accessed via {@link #getInstance()}.</p>
  *
  * @author zhenchao.wang 2016-09-06 11:39:06
  * @version 1.0.0
+ * @see SourceProvider
  */
 public class ProviderFactory {
 
@@ -242,15 +249,24 @@ public class ProviderFactory {
         Collections.sort(providers);
     }
 
+    /**
+     * Returns the singleton factory instance.
+     *
+     * @return the factory instance
+     */
     public static ProviderFactory getInstance() {
         return INSTANCE;
     }
 
     /**
-     * Get matched {@link SourceProvider} for {@code source}.
+     * Finds a provider that supports the given source.
+     * <p>
+     * Providers are checked in priority order (highest first).
+     * Results are cached for subsequent lookups.
+     * </p>
      *
-     * @param source
-     * @return {@code null} is no provider was founded.
+     * @param source the source to find a provider for
+     * @return the matching provider, or {@code null} if none found
      */
     public SourceProvider getSourceProvider(final Source source) {
         final SourceProvider provider = providerMap.get(source);
@@ -262,7 +278,10 @@ public class ProviderFactory {
     }
 
     /**
-     * Clean up.
+     * Clears all providers and releases resources.
+     * <p>
+     * Calls {@link SourceProvider#onDestroy()} on each provider.
+     * </p>
      */
     public void clear() {
         for (final SourceProvider provider : providerMap.values()) {
