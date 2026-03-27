@@ -208,10 +208,15 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.Map.Entry;
 
 public class EnvironmentAccessorTest {
 
@@ -219,7 +224,59 @@ public class EnvironmentAccessorTest {
 
     @Before
     public void setupEnvironment() {
-        environment = EnvironmentAccessor.getInstance().getEnvironment();
+        environment = new DefaultEnvironment();
+    }
+
+    @After
+    public void tearDown() {
+    }
+
+    private static class DefaultEnvironment implements Environment {
+
+        @Override
+        public Map<String, String> getEnvironmentProperties() {
+            return Collections.unmodifiableMap(System.getenv());
+        }
+
+        @Override
+        public Map<String, String> getSystemProperties() {
+            Map<String, String> result = new HashMap<>();
+            for (Entry<Object, Object> entry : System.getProperties().entrySet()) {
+                result.put(String.valueOf(entry.getKey()), String.valueOf(entry.getValue()));
+            }
+            return Collections.unmodifiableMap(result);
+        }
+
+        @Override
+        public String getEnvironmentProperty(String name) {
+            return this.getEnvironmentProperty(name, null);
+        }
+
+        @Override
+        public String getEnvironmentProperty(String name, String defaultValue) {
+            final String value = System.getenv(name);
+            return null == value ? defaultValue : value;
+        }
+
+        @Override
+        public String getSystemProperty(String name) {
+            return System.getProperty(name);
+        }
+
+        @Override
+        public String getSystemProperty(String name, String defaultValue) {
+            return System.getProperty(name, defaultValue);
+        }
+
+        @Override
+        public boolean containsSystemProperty(String name) {
+            return null != this.getSystemProperty(name);
+        }
+
+        @Override
+        public boolean containsEnvironmentProperty(String name) {
+            return null != this.getEnvironmentProperty(name);
+        }
     }
 
     @Test
