@@ -201,161 +201,121 @@
  *    See the License for the specific language governing permissions and
  *    limitations under the License.
  */
-package org.zhenchao.theia.util;
+package org.zhenchao.theia.inject;
 
-import org.junit.Assert;
 import org.junit.Test;
+import org.zhenchao.theia.AbstractOptions;
+import org.zhenchao.theia.Attribute;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.function.Function;
-import java.util.function.Predicate;
+import java.util.Collection;
+
+import static org.junit.Assert.*;
 
 /**
- * @author zhenchao.wang 2018-11-02 10:17
+ * @author zhenchao.wang 2017-09-05 18:12:37
  * @version 1.0.0
  */
-public class ParserTest {
+public class PropertyInjectorDetectorTest {
 
     @Test
-    public void toList() {
-        String[] array = {"1", "2", "3", "4", "5", "6", "7", "8", "9"};
-        List<Integer> list = Parser.toList(array, "aaa", (Function<String, Integer>) Integer::valueOf);
-        Assert.assertEquals(Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9), list);
-
-        List<Integer> list2 = Parser.toList(array, "bbb", Integer::valueOf, integer -> integer % 2 == 0);
-        Assert.assertEquals(Arrays.asList(2, 4, 6, 8), list2);
+    public void testResolveInjectorsWithSetter() throws Exception {
+        TestOptionsWithSetter options = new TestOptionsWithSetter();
+        Collection<PropertyInjector> injectors = PropertyInjectorDetector.resolveInjectors(options);
+        assertFalse(injectors.isEmpty());
     }
 
     @Test
-    public void toListWithEmptyArray() {
-        List<String> list = Parser.toList(null, "test", (Function<String, String>) s -> s);
-        Assert.assertEquals(Collections.emptyList(), list);
-
-        List<String> list2 = Parser.toList(new String[0], "test", (Function<String, String>) s -> s);
-        Assert.assertEquals(Collections.emptyList(), list2);
+    public void testResolveInjectorsWithField() throws Exception {
+        TestOptionsWithField options = new TestOptionsWithField();
+        Collection<PropertyInjector> injectors = PropertyInjectorDetector.resolveInjectors(options);
+        assertFalse(injectors.isEmpty());
     }
 
     @Test
-    public void toListWithBlankElements() {
-        String[] array = {"a", "", "  ", "b", null, "c"};
-        List<String> list = Parser.toList(array, "test", (Function<String, String>) s -> s.trim(), s -> !s.isEmpty());
-        Assert.assertEquals(Arrays.asList("a", "b", "c"), list);
+    public void testResolveInjectorsWithBoth() throws Exception {
+        TestOptionsWithBoth options = new TestOptionsWithBoth();
+        Collection<PropertyInjector> injectors = PropertyInjectorDetector.resolveInjectors(options);
+        assertFalse(injectors.isEmpty());
     }
 
     @Test
-    public void toListWithPredicate() {
-        String[] array = {"  a  ", "  b  ", "  c  "};
-        List<String> list = Parser.toList(array, "test", (Predicate<String>) s -> s.length() > 0);
-        Assert.assertEquals(Arrays.asList("a", "b", "c"), list);
+    public void testResolveInjectorsWithGetterAnnotation() throws Exception {
+        TestOptionsWithGetterAnnotation options = new TestOptionsWithGetterAnnotation();
+        Collection<PropertyInjector> injectors = PropertyInjectorDetector.resolveInjectors(options);
+        assertFalse(injectors.isEmpty());
     }
 
     @Test
-    public void toSet() {
-        String[] array = {"1", "2", "3", "4", "5", "6", "7", "8", "9"};
-        Set<Integer> set = Parser.toSet(array, "aaa", (Function<String, Integer>) Integer::valueOf);
-        Assert.assertEquals(new HashSet<>(Arrays.asList(1, 2, 3, 4, 5, 6, 7, 8, 9)), set);
-
-        Set<Integer> set2 = Parser.toSet(array, "bbb", Integer::valueOf, integer -> integer % 2 == 0);
-        Assert.assertEquals(new HashSet<>(Arrays.asList(2, 4, 6, 8)), set2);
+    public void testResolveInjectorsWithInheritance() throws Exception {
+        TestOptionsChild options = new TestOptionsChild();
+        Collection<PropertyInjector> injectors = PropertyInjectorDetector.resolveInjectors(options);
+        assertFalse(injectors.isEmpty());
     }
 
-    @Test
-    public void toSetWithEmptyArray() {
-        Set<String> set = Parser.toSet(null, "test", (Function<String, String>) s -> s);
-        Assert.assertEquals(Collections.emptySet(), set);
+    static class TestOptionsWithSetter extends AbstractOptions {
+        private String name;
 
-        Set<String> set2 = Parser.toSet(new String[0], "test", (Function<String, String>) s -> s);
-        Assert.assertEquals(Collections.emptySet(), set2);
+        @Attribute("test.name")
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+            return name;
+        }
     }
 
-    @Test
-    public void toSetWithBlankElements() {
-        String[] array = {"a", "", "  ", "b", null, "c"};
-        Set<String> set = Parser.toSet(array, "test", (Function<String, String>) s -> s.trim(), s -> !s.isEmpty());
-        Assert.assertEquals(new HashSet<>(Arrays.asList("a", "b", "c")), set);
+    static class TestOptionsWithField extends AbstractOptions {
+        @Attribute("test.value")
+        private int value;
+
+        public int getValue() {
+            return value;
+        }
     }
 
-    @Test
-    public void toSetWithPredicate() {
-        String[] array = {"  a  ", "  b  ", "  c  "};
-        Set<String> set = Parser.toSet(array, "test", (Predicate<String>) s -> s.length() > 0);
-        Assert.assertEquals(new HashSet<>(Arrays.asList("a", "b", "c")), set);
+    static class TestOptionsWithBoth extends AbstractOptions {
+        @Attribute("test.name")
+        private String name;
+
+        @Attribute("test.name")
+        public void setName(String name) {
+            this.name = name;
+        }
+
+        public String getName() {
+            return name;
+        }
     }
 
-    @Test
-    public void toMapWithKeyPredicate() {
-        String[] array = {"key1=value1", "key2=value2", "key3=value3"};
-        Map<String, String> map = Parser.toMap(array, "test", "=", k -> k.startsWith("key"));
-        Assert.assertEquals(3, map.size());
-        Assert.assertEquals("value1", map.get("key1"));
-        Assert.assertEquals("value2", map.get("key2"));
-        Assert.assertEquals("value3", map.get("key3"));
+    static class TestOptionsWithGetterAnnotation extends AbstractOptions {
+        private String name;
+
+        @Attribute("test.name")
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
     }
 
-    @Test
-    public void toMapWithEmptyArray() {
-        Map<String, String> map = Parser.toMap(null, "test", "=", k -> true);
-        Assert.assertEquals(Collections.emptyMap(), map);
+    static class TestOptionsParent extends AbstractOptions {
+        @Attribute("parent.value")
+        private String parentValue;
 
-        Map<String, String> map2 = Parser.toMap(new String[0], "test", "=", k -> true);
-        Assert.assertEquals(Collections.emptyMap(), map2);
+        public String getParentValue() {
+            return parentValue;
+        }
     }
 
-    @Test
-    public void toMapWithTypeConversion() {
-        String[] array = {"1=100", "2=200", "3=300"};
-        Map<Integer, Long> map = Parser.toMap(array, "test", "=", Integer::parseInt, Long::parseLong);
-        Assert.assertEquals(3, map.size());
-        Assert.assertEquals(Long.valueOf(100), map.get(1));
-        Assert.assertEquals(Long.valueOf(200), map.get(2));
-        Assert.assertEquals(Long.valueOf(300), map.get(3));
-    }
+    static class TestOptionsChild extends TestOptionsParent {
+        @Attribute("child.value")
+        private int childValue;
 
-    @Test
-    public void toMapWithInvalidFormat() {
-        String[] array = {"key1=value1", "invalid", "key2=value2"};
-        Map<String, String> map = Parser.toMap(array, "test", "=", k -> true);
-        Assert.assertEquals(2, map.size());
-        Assert.assertEquals("value1", map.get("key1"));
-        Assert.assertEquals("value2", map.get("key2"));
-    }
-
-    @Test
-    public void toMapWithEmptyKey() {
-        String[] array = {"=value1", "key2=value2"};
-        Map<String, String> map = Parser.toMap(array, "test", "=", k -> true);
-        Assert.assertEquals(1, map.size());
-        Assert.assertEquals("value2", map.get("key2"));
-    }
-
-    @Test
-    public void toMapWithBlankElements() {
-        String[] array = {"key1=value1", "", "  ", "key2=value2"};
-        Map<String, String> map = Parser.toMap(array, "test", "=", k -> true);
-        Assert.assertEquals(2, map.size());
-    }
-
-    @Test
-    public void toMapWithKeyValueValidation() {
-        String[] array = {"key1=value1", "key2=value2", "invalid=value"};
-        Map<String, String> map = Parser.toMap(array, "test", "=",
-            k -> k, v -> v,
-            k -> k.startsWith("key"),
-            v -> v.length() > 1);
-        Assert.assertEquals(2, map.size());
-    }
-
-    @Test
-    public void toMapWithMultipleSeparators() {
-        String[] array = {"key1=value1=extra", "key2=value2"};
-        Map<String, String> map = Parser.toMap(array, "test", "=", k -> true);
-        Assert.assertEquals(2, map.size());
-        Assert.assertEquals("value1=extra", map.get("key1"));
-        Assert.assertEquals("value2", map.get("key2"));
+        public int getChildValue() {
+            return childValue;
+        }
     }
 }
